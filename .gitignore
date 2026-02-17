@@ -1,0 +1,27 @@
+# Build outputs
+bin/
+obj/
+compile/
+
+# User-specific files
+*.user
+*.suo
+.vs/
+
+# NuGet
+packages/
+*.nupkg
+
+# Logs
+tools/*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Rider / VS Code
+.idea/
+.vscode/
+
+# Downloaded tools cache (kept in compile/, not source/)
+tools/.cache/
