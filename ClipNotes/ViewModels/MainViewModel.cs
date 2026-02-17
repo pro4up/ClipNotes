@@ -60,13 +60,22 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private int _processingTotal = 1;
     [ObservableProperty] private bool _reviewReady;
 
+    // --- Manual video loading (without OBS) ---
+    [ObservableProperty] private string? _loadedVideoPath;
+    [ObservableProperty] private string _manualMarkerTimecode = "00:00:30";
+    [ObservableProperty] private MarkerType _manualMarkerType = MarkerType.Note;
+
+    // --- Tool validation ---
+    [ObservableProperty] private string _toolsStatus = "";
+
     // --- History ---
     public ObservableCollection<SessionHistoryEntry> SessionHistory { get; } = new();
 
     // --- Audio codec options ---
     public string[] AudioCodecOptions { get; } = { "wav", "mp3", "aac" };
-    public string[] ModelOptions { get; } = { "large-v3-turbo", "large-v3" };
+    public string[] ModelOptions { get; } = { "large-v3-turbo", "large-v3", "medium", "small", "base" };
     public string[] LanguageOptions { get; } = { "auto", "ru", "en", "de", "fr", "es", "zh", "ja", "ko" };
+    public MarkerType[] MarkerTypeOptions { get; } = { MarkerType.Bug, MarkerType.Task, MarkerType.Note };
 
     public MainViewModel()
     {
@@ -90,12 +99,35 @@ public partial class MainViewModel : ObservableObject
 
         LoadSettings();
         SetupToolPaths();
+        ValidateTools();
     }
 
     private void SetupToolPaths()
     {
         _ffmpeg.SetPaths(PathHelper.FFmpegPath, PathHelper.FFprobePath);
         _whisper.SetPaths(PathHelper.WhisperCliPath, PathHelper.GetModelPath(WhisperModel));
+    }
+
+    private void ValidateTools()
+    {
+        var issues = new List<string>();
+        if (!File.Exists(PathHelper.FFmpegPath)) issues.Add("ffmpeg.exe не найден");
+        if (!File.Exists(PathHelper.FFprobePath)) issues.Add("ffprobe.exe не найден");
+        if (!File.Exists(PathHelper.WhisperCliPath)) issues.Add("whisper-cli.exe не найден");
+
+        var modelPath = PathHelper.GetModelPath(WhisperModel);
+        if (!File.Exists(modelPath))
+            issues.Add($"Модель '{WhisperModel}' не найдена — выберите другую модель в настройках");
+
+        ToolsStatus = issues.Count == 0
+            ? $"Инструменты: OK | Модель: {WhisperModel}"
+            : "⚠ " + string.Join("; ", issues);
+    }
+
+    partial void OnWhisperModelChanged(string value)
+    {
+        SetupToolPaths();
+        ValidateTools();
     }
 
     private void LoadSettings()
@@ -320,6 +352,90 @@ public partial class MainViewModel : ObservableObject
         {
             RecordingStatus = $"Ошибка остановки: {ex.Message}";
         }
+    }
+
+    [RelayCommand]
+    private async Task LoadExistingVideoAsync()
+    {
+        if (string.IsNullOrWhiteSpace(OutputRootDirectory))
+        {
+            ProcessingStatus = "Сначала укажите выходную директорию в настройках";
+            CurrentTab = 0;
+            return;
+        }
+
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Выберите видеофайл для генерации",
+            Filter = "Видеофайлы (*.mkv;*.mp4;*.avi;*.mov;*.flv;*.wmv)|*.mkv;*.mp4;*.avi;*.mov;*.flv;*.wmv|Все файлы (*.*)|*.*"
+        };
+
+        if (dialog.ShowDialog() != true) return;
+
+        try
+        {
+            var sessionDir = _sessionService.CreateSessionFolder(OutputRootDirectory);
+            _currentSession = new SessionData
+            {
+                SessionName = Path.GetFileName(sessionDir),
+                SessionFolder = sessionDir,
+                StartedAt = DateTime.Now,
+                SettingsSnapshot = CreateSettingsSnapshot(),
+                VideoFilePath = dialog.FileName
+            };
+
+            SetupToolPaths();
+            ValidateTools();
+            var dur = await _ffmpeg.GetDurationAsync(dialog.FileName);
+            _currentSession.Duration = dur;
+
+            LoadedVideoPath = dialog.FileName;
+            Markers.Clear();
+            ReviewReady = true;
+            ProcessingStatus = $"Видео загружено: {Path.GetFileName(dialog.FileName)} ({dur:hh\\:mm\\:ss})";
+            CurrentTab = 2;
+        }
+        catch (Exception ex)
+        {
+            ProcessingStatus = $"Ошибка загрузки: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
+    private void AddManualMarker()
+    {
+        if (_currentSession == null) return;
+
+        if (!TimeSpan.TryParseExact(ManualMarkerTimecode, @"hh\:mm\:ss", null, out var ts) &&
+            !TimeSpan.TryParseExact(ManualMarkerTimecode, @"h\:mm\:ss", null, out ts) &&
+            !TimeSpan.TryParseExact(ManualMarkerTimecode, @"mm\:ss", null, out ts) &&
+            !TimeSpan.TryParse(ManualMarkerTimecode, out ts))
+        {
+            ProcessingStatus = "Неверный формат тайм-кода. Используйте ЧЧ:ММ:СС";
+            return;
+        }
+
+        var marker = new Marker
+        {
+            Index = Markers.Count + 1,
+            Type = ManualMarkerType,
+            Timestamp = ts,
+            Timecode = ts.ToString(@"hh\:mm\:ss\.000")
+        };
+
+        Markers.Add(marker);
+        // Advance timecode by 30 seconds for convenience
+        ManualMarkerTimecode = (ts + TimeSpan.FromSeconds(30)).ToString(@"hh\:mm\:ss");
+    }
+
+    [RelayCommand]
+    private void RemoveMarker(Marker? marker)
+    {
+        if (marker == null) return;
+        Markers.Remove(marker);
+        // Re-index
+        for (int i = 0; i < Markers.Count; i++)
+            Markers[i].Index = i + 1;
     }
 
     [RelayCommand]

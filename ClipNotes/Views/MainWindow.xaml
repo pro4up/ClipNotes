@@ -19,6 +19,13 @@
                     <StackPanel MaxWidth="640" Margin="32,24">
                         <TextBlock Style="{StaticResource Heading}" Text="Настройки"/>
 
+                        <!-- Tool status banner -->
+                        <Border Background="#F0F7FF" BorderBrush="#B0D4F0" BorderThickness="1" CornerRadius="8"
+                                Padding="12,8" Margin="0,0,0,12">
+                            <TextBlock Text="{Binding ToolsStatus}" Style="{StaticResource BaseText}"
+                                       Foreground="#1A4A7A" TextWrapping="Wrap" FontSize="13"/>
+                        </Border>
+
                         <!-- OBS Connection -->
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
@@ -248,71 +255,104 @@
 
             <!-- ==================== REVIEW/EXPORT TAB ==================== -->
             <TabItem Header="Экспорт">
-                <Grid Margin="32,24">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel Margin="32,24" MaxWidth="820">
 
-                    <TextBlock Grid.Row="0" Style="{StaticResource Heading}" Text="Экспорт и генерация"/>
+                        <TextBlock Style="{StaticResource Heading}" Text="Экспорт и генерация"/>
 
-                    <Border Grid.Row="1" Style="{StaticResource Card}">
-                        <DockPanel>
-                            <TextBlock DockPanel.Dock="Top" Style="{StaticResource SubHeading}"
-                                       Text="Настройка маркеров для генерации"/>
-                            <ListView ItemsSource="{Binding Markers}" BorderThickness="0" Background="Transparent">
-                                <ListView.ItemTemplate>
-                                    <DataTemplate>
-                                        <Grid Margin="0,4">
-                                            <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="40"/>
-                                                <ColumnDefinition Width="100"/>
-                                                <ColumnDefinition Width="80"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                                <ColumnDefinition Width="Auto"/>
-                                            </Grid.ColumnDefinitions>
-                                            <TextBlock Grid.Column="0" Text="{Binding Index}" Style="{StaticResource BaseText}"
-                                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
-                                            <TextBlock Grid.Column="1" Text="{Binding TimestampFormatted}" Style="{StaticResource BaseText}"
-                                                       FontFamily="Consolas" VerticalAlignment="Center"/>
-                                            <Border Grid.Column="2" CornerRadius="4" Padding="8,2"
-                                                    Background="{Binding Type, Converter={StaticResource MarkerTypeToBrush}}"
-                                                    HorizontalAlignment="Left" VerticalAlignment="Center">
-                                                <TextBlock Text="{Binding Type}" Foreground="White" FontSize="12" FontWeight="SemiBold"/>
-                                            </Border>
-                                            <CheckBox Grid.Column="3" IsChecked="{Binding GenerateAudio}" Content="Аудио"
-                                                      VerticalAlignment="Center" Margin="12,0,8,0"/>
-                                            <CheckBox Grid.Column="4" IsChecked="{Binding GenerateText}" Content="Текст"
-                                                      VerticalAlignment="Center"/>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ListView.ItemTemplate>
-                            </ListView>
-                        </DockPanel>
-                    </Border>
-
-                    <Border Grid.Row="2" Style="{StaticResource Card}">
-                        <StackPanel>
-                            <StackPanel Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
-                                <TextBlock Text="{Binding ProcessingStatus}" Style="{StaticResource BaseText}" Margin="0,0,0,8"/>
-                                <ProgressBar Value="{Binding ProcessingProgress}" Maximum="{Binding ProcessingTotal}"
-                                             Height="6" Foreground="{StaticResource AccentBrush}"/>
+                        <!-- Load existing video (without OBS) -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="Загрузить видео (без OBS)"/>
+                                <DockPanel Margin="0,0,0,12">
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                            Content="Обзор" Command="{Binding LoadExistingVideoCommand}" Margin="8,0,0,0"/>
+                                    <TextBox Text="{Binding LoadedVideoPath, Mode=OneWay, FallbackValue='Видеофайл не выбран'}"
+                                             IsReadOnly="True" Background="{StaticResource SeparatorBrush}"/>
+                                </DockPanel>
+                                <TextBlock Style="{StaticResource Label}" Text="Добавить маркер вручную (ЧЧ:ММ:СС)" Margin="0,0,0,4"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <TextBox Text="{Binding ManualMarkerTimecode, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="110" Margin="0,0,8,0" FontFamily="Consolas"/>
+                                    <ComboBox ItemsSource="{Binding MarkerTypeOptions}"
+                                              SelectedItem="{Binding ManualMarkerType}"
+                                              Width="100" Margin="0,0,8,0"/>
+                                    <Button Style="{StaticResource SecondaryButton}" Content="+ Добавить"
+                                            Command="{Binding AddManualMarkerCommand}"/>
+                                </StackPanel>
                             </StackPanel>
-                            <StackPanel Orientation="Horizontal">
-                                <Button Style="{StaticResource PrimaryButton}" Content="Генерировать"
-                                        Command="{Binding GenerateCommand}"
-                                        IsEnabled="{Binding IsProcessing, Converter={StaticResource InverseBool}}"/>
-                                <Button Style="{StaticResource DangerButton}" Content="Отмена"
-                                        Command="{Binding CancelGenerationCommand}"
-                                        Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}"
-                                        Margin="8,0,0,0"/>
-                                <Button Style="{StaticResource SecondaryButton}" Content="Открыть папку сессии"
-                                        Command="{Binding OpenSessionFolderCommand}" Margin="8,0,0,0"/>
+                        </Border>
+
+                        <!-- Markers list -->
+                        <Border Style="{StaticResource Card}">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Style="{StaticResource SubHeading}"
+                                           Text="{Binding Markers.Count, StringFormat='Маркеры ({0})'}"/>
+                                <ListView ItemsSource="{Binding Markers}" BorderThickness="0" Background="Transparent"
+                                          MaxHeight="300" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                    <ListView.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,4">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="36"/>
+                                                    <ColumnDefinition Width="100"/>
+                                                    <ColumnDefinition Width="72"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                    <ColumnDefinition Width="Auto"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding Index}" Style="{StaticResource BaseText}"
+                                                           Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                <TextBlock Grid.Column="1" Text="{Binding TimestampFormatted}" Style="{StaticResource BaseText}"
+                                                           FontFamily="Consolas" VerticalAlignment="Center"/>
+                                                <Border Grid.Column="2" CornerRadius="4" Padding="8,2"
+                                                        Background="{Binding Type, Converter={StaticResource MarkerTypeToBrush}}"
+                                                        HorizontalAlignment="Left" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Type}" Foreground="White" FontSize="12" FontWeight="SemiBold"/>
+                                                </Border>
+                                                <CheckBox Grid.Column="3" IsChecked="{Binding GenerateAudio}" Content="Аудио"
+                                                          VerticalAlignment="Center" Margin="12,0,8,0"/>
+                                                <CheckBox Grid.Column="4" IsChecked="{Binding GenerateText}" Content="Текст"
+                                                          VerticalAlignment="Center"/>
+                                                <Button Grid.Column="6" Style="{StaticResource DangerButton}" Content="✕"
+                                                        Padding="8,4" FontSize="12"
+                                                        Command="{Binding DataContext.RemoveMarkerCommand, RelativeSource={RelativeSource AncestorType=Window}}"
+                                                        CommandParameter="{Binding}"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ListView.ItemTemplate>
+                                </ListView>
+                            </DockPanel>
+                        </Border>
+
+                        <!-- Generation controls -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <StackPanel Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
+                                    <TextBlock Text="{Binding ProcessingStatus}" Style="{StaticResource BaseText}" Margin="0,0,0,8"/>
+                                    <ProgressBar Value="{Binding ProcessingProgress}" Maximum="{Binding ProcessingTotal}"
+                                                 Height="6" Foreground="{StaticResource AccentBrush}"/>
+                                </StackPanel>
+                                <TextBlock Text="{Binding ProcessingStatus}" Style="{StaticResource BaseText}"
+                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"
+                                           Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"
+                                           TextWrapping="Wrap"/>
+                                <StackPanel Orientation="Horizontal">
+                                    <Button Style="{StaticResource PrimaryButton}" Content="Генерировать"
+                                            Command="{Binding GenerateCommand}"
+                                            IsEnabled="{Binding IsProcessing, Converter={StaticResource InverseBool}}"/>
+                                    <Button Style="{StaticResource DangerButton}" Content="Отмена"
+                                            Command="{Binding CancelGenerationCommand}"
+                                            Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}"
+                                            Margin="8,0,0,0"/>
+                                    <Button Style="{StaticResource SecondaryButton}" Content="Открыть папку"
+                                            Command="{Binding OpenSessionFolderCommand}" Margin="8,0,0,0"/>
+                                </StackPanel>
                             </StackPanel>
-                        </StackPanel>
-                    </Border>
-                </Grid>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
             </TabItem>
 
             <!-- ==================== HISTORY TAB ==================== -->

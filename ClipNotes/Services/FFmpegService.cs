@@ -62,9 +62,14 @@ public class FFmpegService
         };
 
         process.Start();
-        var stdout = await process.StandardOutput.ReadToEndAsync(ct);
-        var stderr = await process.StandardError.ReadToEndAsync(ct);
+        // Read stdout and stderr concurrently to prevent pipe buffer deadlock
+        var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);
+        var stderrTask = process.StandardError.ReadToEndAsync(ct);
+        await Task.WhenAll(stdoutTask, stderrTask);
         await process.WaitForExitAsync(ct);
+
+        var stdout = stdoutTask.Result;
+        var stderr = stderrTask.Result;
 
         if (process.ExitCode != 0)
             throw new InvalidOperationException($"Process exited with code {process.ExitCode}: {stderr}");

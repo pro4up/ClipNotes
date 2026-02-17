@@ -10,13 +10,36 @@ if (-not (Test-Path $OutputDir)) { New-Item -ItemType Directory -Path $OutputDir
 
 $fileName = "ggml-$ModelName.bin"
 $outputPath = "$OutputDir\$fileName"
-
-if (Test-Path $outputPath) {
-    Write-Host "[Model] $fileName already present, skipping download."
-    return
-}
-
 $url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/$fileName"
+
+# Check if file exists and has the correct size (verify complete download)
+if (Test-Path $outputPath) {
+    $localSize = (Get-Item $outputPath).Length
+    try {
+        $req = [System.Net.WebRequest]::Create($url)
+        $req.Method = "HEAD"
+        $req.Timeout = 10000
+        $resp = $req.GetResponse()
+        $remoteSize = $resp.ContentLength
+        $resp.Close()
+
+        if ($remoteSize -gt 0 -and $localSize -ge $remoteSize) {
+            Write-Host "[Model] $fileName already present and complete ($([int]($localSize/1MB)) MB), skipping download."
+            return
+        } else {
+            Write-Host "[Model] $fileName exists but is incomplete ($([int]($localSize/1MB)) MB / $([int]($remoteSize/1MB)) MB expected). Re-downloading..."
+            Remove-Item $outputPath -Force
+        }
+    } catch {
+        # Can't check remote size — skip re-download if file seems reasonably large (>100MB)
+        if ($localSize -gt 100MB) {
+            Write-Host "[Model] $fileName already present ($([int]($localSize/1MB)) MB), skipping download."
+            return
+        }
+        Write-Host "[Model] $fileName is very small, re-downloading..."
+        Remove-Item $outputPath -Force
+    }
+}
 
 Write-Host "[Model] Downloading $fileName from Hugging Face..."
 Write-Host "[Model] URL: $url"
@@ -27,7 +50,7 @@ $webClient = New-Object System.Net.WebClient
 try {
     $webClient.DownloadFile($url, $outputPath)
     $size = (Get-Item $outputPath).Length / 1MB
-    Write-Host "[Model] Downloaded $fileName ({0:N0} MB)" -f $size
+    Write-Host "[Model] Downloaded $fileName ($([int]$size) MB)"
 } catch {
     Write-Host "[Model] Failed to download: $_"
     Write-Host "[Model] You can manually download from: $url"
