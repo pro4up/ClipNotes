@@ -28,7 +28,15 @@ public partial class MainWindow : Window
     private void HotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)
     {
         if (sender is TextBox tb)
-            tb.Background = System.Windows.Media.Brushes.LightYellow;
+            tb.Background = App.IsDark
+                ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(80, 76, 20))
+                : System.Windows.Media.Brushes.LightYellow;
+    }
+
+    private void HotkeyTextBox_LostFocus(object sender, RoutedEventArgs e)
+    {
+        if (sender is TextBox tb)
+            tb.ClearValue(TextBox.BackgroundProperty);
     }
 
     private void HotkeyTextBox_PreviewKeyDown(object sender, KeyEventArgs e)
@@ -62,7 +70,7 @@ public partial class MainWindow : Window
             var tempKey = binding.Key;
             binding.Key = Key.None;
             binding.Key = tempKey;
-            tb.Background = System.Windows.Media.Brushes.White;
+            tb.ClearValue(TextBox.BackgroundProperty);
 
             ViewModel.SaveSettings();
             ViewModel.RefreshHotkeys();

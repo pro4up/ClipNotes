@@ -5,7 +5,7 @@
         xmlns:models="clr-namespace:ClipNotes.Models"
         Title="ClipNotes" Height="780" Width="900"
         MinHeight="600" MinWidth="750"
-        Background="{StaticResource BgBrush}"
+        Background="{DynamicResource BgBrush}"
         WindowStartupLocation="CenterScreen"
         Loaded="Window_Loaded" Closing="Window_Closing">
     <Window.DataContext>
@@ -20,10 +20,13 @@
                         <TextBlock Style="{StaticResource Heading}" Text="Настройки"/>
 
                         <!-- Tool status banner -->
-                        <Border Background="#F0F7FF" BorderBrush="#B0D4F0" BorderThickness="1" CornerRadius="8"
+                        <Border Background="{DynamicResource InfoBannerBgBrush}"
+                                BorderBrush="{DynamicResource InfoBannerBorderBrush}"
+                                BorderThickness="1" CornerRadius="8"
                                 Padding="12,8" Margin="0,0,0,12">
                             <TextBlock Text="{Binding ToolsStatus}" Style="{StaticResource BaseText}"
-                                       Foreground="#1A4A7A" TextWrapping="Wrap" FontSize="13"/>
+                                       Foreground="{DynamicResource InfoBannerFgBrush}"
+                                       TextWrapping="Wrap" FontSize="13"/>
                         </Border>
 
                         <!-- OBS Connection -->
@@ -143,6 +146,20 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Theme -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="Оформление"/>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Style="{StaticResource Label}" Text="Тема:" VerticalAlignment="Center"
+                                               Margin="0,0,12,0"/>
+                                    <ComboBox ItemsSource="{Binding ThemeOptions}"
+                                              SelectedItem="{Binding SelectedTheme}"
+                                              Width="130"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Hotkeys -->
                         <Border Style="{StaticResource Card}">
                             <StackPanel>
@@ -161,6 +178,7 @@
                                                 <TextBox Grid.Column="1" Text="{Binding HotkeyText, Mode=OneWay}"
                                                          IsReadOnly="True" PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
                                                          GotFocus="HotkeyTextBox_GotFocus"
+                                                         LostFocus="HotkeyTextBox_LostFocus"
                                                          Tag="{Binding}" Cursor="Hand"/>
                                             </Grid>
                                         </DataTemplate>
@@ -188,10 +206,10 @@
                         <StackPanel HorizontalAlignment="Center">
                             <TextBlock Text="{Binding RecordingTime}"
                                        FontSize="56" FontWeight="Light" FontFamily="Segoe UI"
-                                       Foreground="{StaticResource TextPrimaryBrush}"
+                                       Foreground="{DynamicResource TextPrimaryBrush}"
                                        HorizontalAlignment="Center" Margin="0,8,0,8"/>
                             <TextBlock Text="{Binding RecordingStatus}" Style="{StaticResource BaseText}"
-                                       Foreground="{StaticResource TextSecondaryBrush}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
                                        HorizontalAlignment="Center" Margin="0,0,0,16"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Style="{StaticResource PrimaryButton}" Content="Начать запись"
@@ -236,7 +254,7 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Grid.Column="0" Text="{Binding Index}" Style="{StaticResource BaseText}"
-                                                       Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                       Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                             <TextBlock Grid.Column="1" Text="{Binding TimestampFormatted}" Style="{StaticResource BaseText}"
                                                        FontFamily="Consolas" VerticalAlignment="Center"/>
                                             <Border Grid.Column="2" CornerRadius="4" Padding="8,2"
@@ -268,7 +286,7 @@
                                     <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
                                             Content="Обзор" Command="{Binding LoadExistingVideoCommand}" Margin="8,0,0,0"/>
                                     <TextBox Text="{Binding LoadedVideoPath, Mode=OneWay, FallbackValue='Видеофайл не выбран'}"
-                                             IsReadOnly="True" Background="{StaticResource SeparatorBrush}"/>
+                                             IsReadOnly="True"/>
                                 </DockPanel>
                                 <TextBlock Style="{StaticResource Label}" Text="Добавить маркер вручную (ЧЧ:ММ:СС)" Margin="0,0,0,4"/>
                                 <StackPanel Orientation="Horizontal">
@@ -303,7 +321,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBlock Grid.Column="0" Text="{Binding Index}" Style="{StaticResource BaseText}"
-                                                           Foreground="{StaticResource TextSecondaryBrush}" VerticalAlignment="Center"/>
+                                                           Foreground="{DynamicResource TextSecondaryBrush}" VerticalAlignment="Center"/>
                                                 <TextBlock Grid.Column="1" Text="{Binding TimestampFormatted}" Style="{StaticResource BaseText}"
                                                            FontFamily="Consolas" VerticalAlignment="Center"/>
                                                 <Border Grid.Column="2" CornerRadius="4" Padding="8,2"
@@ -332,10 +350,10 @@
                                 <StackPanel Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}}" Margin="0,0,0,12">
                                     <TextBlock Text="{Binding ProcessingStatus}" Style="{StaticResource BaseText}" Margin="0,0,0,8"/>
                                     <ProgressBar Value="{Binding ProcessingProgress}" Maximum="{Binding ProcessingTotal}"
-                                                 Height="6" Foreground="{StaticResource AccentBrush}"/>
+                                                 Height="6" Foreground="{DynamicResource AccentBrush}"/>
                                 </StackPanel>
                                 <TextBlock Text="{Binding ProcessingStatus}" Style="{StaticResource BaseText}"
-                                           Foreground="{StaticResource TextSecondaryBrush}" Margin="0,0,0,8"
+                                           Foreground="{DynamicResource TextSecondaryBrush}" Margin="0,0,0,8"
                                            Visibility="{Binding IsProcessing, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"
                                            TextWrapping="Wrap"/>
                                 <StackPanel Orientation="Horizontal">
@@ -379,10 +397,10 @@
                                             <TextBlock Text="{Binding SessionName}" Style="{StaticResource BaseText}" FontWeight="Medium"/>
                                             <TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:dd.MM.yyyy HH:mm}'}"
                                                        Style="{StaticResource BaseText}"
-                                                       Foreground="{StaticResource TextSecondaryBrush}" FontSize="12"/>
+                                                       Foreground="{DynamicResource TextSecondaryBrush}" FontSize="12"/>
                                         </StackPanel>
                                         <TextBlock Grid.Column="1" VerticalAlignment="Center" Style="{StaticResource BaseText}"
-                                                   Foreground="{StaticResource TextSecondaryBrush}"
+                                                   Foreground="{DynamicResource TextSecondaryBrush}"
                                                    Text="{Binding MarkerCount, StringFormat='{}{0} марк.'}"/>
                                         <Button Grid.Column="2" Style="{StaticResource SecondaryButton}" Content="Открыть"
                                                 Command="{Binding DataContext.OpenHistoryFolderCommand, RelativeSource={RelativeSource AncestorType=Window}}"

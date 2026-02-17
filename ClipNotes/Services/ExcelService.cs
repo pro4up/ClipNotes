@@ -40,7 +40,9 @@ public class ExcelService
             {
                 var cell = ws.Cell(row, 5);
                 cell.Value = Path.GetFileName(m.AudioFilePath);
-                cell.SetHyperlink(new XLHyperlink(m.AudioFilePath));
+                // Xlsx is in table/, so relative path must go up one level
+                var audioLink = "../" + m.AudioFilePath.Replace(Path.DirectorySeparatorChar, '/');
+                cell.SetHyperlink(new XLHyperlink(audioLink));
                 cell.Style.Font.FontColor = XLColor.Blue;
                 cell.Style.Font.Underline = XLFontUnderlineValues.Single;
             }
@@ -49,7 +51,9 @@ public class ExcelService
             {
                 var cell = ws.Cell(row, 6);
                 cell.Value = Path.GetFileName(m.TextFilePath);
-                cell.SetHyperlink(new XLHyperlink(m.TextFilePath));
+                // Xlsx is in table/, so relative path must go up one level
+                var textLink = "../" + m.TextFilePath.Replace(Path.DirectorySeparatorChar, '/');
+                cell.SetHyperlink(new XLHyperlink(textLink));
                 cell.Style.Font.FontColor = XLColor.Blue;
                 cell.Style.Font.Underline = XLFontUnderlineValues.Single;
             }

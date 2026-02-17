@@ -27,6 +27,9 @@ public class AppSettings
     // Hotkeys
     public List<HotkeyBindingData> Hotkeys { get; set; } = GetDefaultHotkeys();
 
+    // Theme
+    public string Theme { get; set; } = "Светлая";
+
     // History
     public List<SessionHistoryEntry> SessionHistory { get; set; } = new();
 

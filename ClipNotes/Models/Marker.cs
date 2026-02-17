@@ -7,7 +7,11 @@ public partial class Marker : ObservableObject
 {
     [ObservableProperty] private int _index;
     [ObservableProperty] private MarkerType _type;
-    [ObservableProperty] private TimeSpan _timestamp;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TimestampFormatted))]
+    private TimeSpan _timestamp;
+
     [ObservableProperty] private string _timecode = "";
     [ObservableProperty] private string _text = "";
     [ObservableProperty] private bool _generateAudio = true;

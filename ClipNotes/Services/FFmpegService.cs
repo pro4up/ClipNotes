@@ -44,7 +44,8 @@ public class FFmpegService
             _ => "-c:a pcm_s16le" // wav
         };
 
-        var args = $"-y -i \"{masterAudioPath}\" -ss {start.TotalSeconds:F3} -t {duration.TotalSeconds:F3} {codecArgs} \"{outputPath}\"";
+        var ic = System.Globalization.CultureInfo.InvariantCulture;
+        var args = $"-y -i \"{masterAudioPath}\" -ss {start.TotalSeconds.ToString("F3", ic)} -t {duration.TotalSeconds.ToString("F3", ic)} {codecArgs} \"{outputPath}\"";
         await RunProcessAsync(_ffmpegPath, args, ct);
     }
 

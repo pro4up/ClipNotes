@@ -9,6 +9,7 @@ using ClipNotes.Models;
 using ClipNotes.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LogSvc = ClipNotes.Services.LogService;
 
 namespace ClipNotes.ViewModels;
 
@@ -71,6 +72,16 @@ public partial class MainViewModel : ObservableObject
     // --- History ---
     public ObservableCollection<SessionHistoryEntry> SessionHistory { get; } = new();
 
+    // --- Theme ---
+    [ObservableProperty] private string _selectedTheme = "Светлая";
+    public string[] ThemeOptions { get; } = { "Светлая", "Тёмная" };
+
+    partial void OnSelectedThemeChanged(string value)
+    {
+        App.ApplyTheme(value == "Тёмная");
+        SaveSettings();
+    }
+
     // --- Audio codec options ---
     public string[] AudioCodecOptions { get; } = { "wav", "mp3", "aac" };
     public string[] ModelOptions { get; } = { "large-v3-turbo", "large-v3", "medium", "small", "base" };
@@ -92,8 +103,11 @@ public partial class MainViewModel : ObservableObject
 
         _obs.RecordStateChanged += OnRecordStateChanged;
         _obs.RecordStopped += OnRecordStopped;
-        _obs.Error += msg => Application.Current.Dispatcher.Invoke(
-            () => ObsStatus = $"Ошибка: {msg}");
+        _obs.Error += msg =>
+        {
+            LogSvc.Error($"OBS: {msg}");
+            Application.Current?.Dispatcher.Invoke(() => ObsStatus = $"Ошибка: {msg}");
+        };
 
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
 
@@ -167,6 +181,9 @@ public partial class MainViewModel : ObservableObject
         SessionHistory.Clear();
         foreach (var h in s.SessionHistory.OrderByDescending(x => x.CreatedAt).Take(20))
             SessionHistory.Add(h);
+
+        // Apply saved theme
+        SelectedTheme = s.Theme; // calls OnSelectedThemeChanged → ApplyTheme
     }
 
     public void SaveSettings()
@@ -185,6 +202,7 @@ public partial class MainViewModel : ObservableObject
             TranscriptionLanguage = TranscriptionLanguage,
             Glossary = Glossary,
             GlossaryFilePath = GlossaryFilePath,
+            Theme = SelectedTheme,
             Hotkeys = HotkeyBindings.Select(h => new HotkeyBindingData
             {
                 Action = h.Action,
@@ -404,7 +422,11 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void AddManualMarker()
     {
-        if (_currentSession == null) return;
+        if (_currentSession == null)
+        {
+            ProcessingStatus = "Сначала загрузите видео (кнопка «Обзор» выше)";
+            return;
+        }
 
         if (!TimeSpan.TryParseExact(ManualMarkerTimecode, @"hh\:mm\:ss", null, out var ts) &&
             !TimeSpan.TryParseExact(ManualMarkerTimecode, @"h\:mm\:ss", null, out ts) &&
@@ -420,11 +442,10 @@ public partial class MainViewModel : ObservableObject
             Index = Markers.Count + 1,
             Type = ManualMarkerType,
             Timestamp = ts,
-            Timecode = ts.ToString(@"hh\:mm\:ss\.000")
+            Timecode = ts.ToString(@"hh\:mm\:ss") + ".000"
         };
 
         Markers.Add(marker);
-        // Advance timecode by 30 seconds for convenience
         ManualMarkerTimecode = (ts + TimeSpan.FromSeconds(30)).ToString(@"hh\:mm\:ss");
     }
 
@@ -456,7 +477,7 @@ public partial class MainViewModel : ObservableObject
                 Timecode = status.Value.timecode
             };
 
-            Application.Current.Dispatcher.Invoke(() => Markers.Add(marker));
+            Application.Current?.Dispatcher.Invoke(() => Markers.Add(marker));
         }
         catch (Exception ex)
         {
@@ -481,9 +502,9 @@ public partial class MainViewModel : ObservableObject
 
             var pipeline = new PipelineService(_ffmpeg, _whisper, _excel);
             pipeline.StatusChanged += s =>
-                Application.Current.Dispatcher.Invoke(() => ProcessingStatus = s);
+                Application.Current?.Dispatcher.Invoke(() => ProcessingStatus = s);
             pipeline.ProgressChanged += (current, total) =>
-                Application.Current.Dispatcher.Invoke(() =>
+                Application.Current?.Dispatcher.Invoke(() =>
                 {
                     ProcessingProgress = current;
                     ProcessingTotal = total;
@@ -499,7 +520,10 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            ProcessingStatus = $"Ошибка: {ex.Message}";
+            LogSvc.Error("Generation pipeline failed", ex);
+            // Show brief message; full details in Logs/
+            var msg = ex.Message.Length > 300 ? ex.Message[..300] + "…" : ex.Message;
+            ProcessingStatus = $"Ошибка: {msg}";
         }
         finally
         {
