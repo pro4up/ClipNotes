@@ -1,6 +1,6 @@
 # Build whisper-cli from source using CMake + MSVC
 param(
-    [string]$OutputDir = "$PSScriptRoot\..\compile\ClipNotes-win-x64\tools"
+    [string]$OutputDir = "$PSScriptRoot\..\..\app\tools"
 )
 
 $ErrorActionPreference = "Stop"

@@ -10,7 +10,7 @@ param(
 $ErrorActionPreference = "Stop"
 $scriptDir = $PSScriptRoot
 $sourceDir = "$scriptDir\ClipNotes"
-$compileDir = "$scriptDir\..\compile\ClipNotes-win-x64"
+$compileDir = "$scriptDir\..\app"
 $toolsOutputDir = "$compileDir\tools"
 $modelsOutputDir = "$compileDir\models"
 $licensesDir = "$compileDir\licenses"

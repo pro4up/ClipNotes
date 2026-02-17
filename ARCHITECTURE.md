@@ -32,8 +32,8 @@
 ## Структура директорий
 
 ```
-E:\Claude Workstation\
-├── source\ClipNotes\              ← исходный код
+E:\Claude Workstation\Projects\ClipNotes\
+├── source\                        ← исходный код (git repo)
 │   ├── ClipNotes.sln
 │   ├── build.ps1                  ← мастер-скрипт сборки
 │   ├── README.md
@@ -52,17 +52,19 @@ E:\Claude Workstation\
 │       ├── Converters\
 │       └── Helpers\
 │
-├── compile\ClipNotes-win-x64\     ← артефакт сборки (эталонная копия)
+├── app\                           ← готовое приложение (dotnet publish output)
 │   ├── ClipNotes.exe
 │   ├── tools\                     ← ffmpeg.exe, ffprobe.exe, whisper-cli.exe + DLL
 │   ├── models\                    ← ggml-large-v3-turbo.bin
 │   └── licenses\
 │
-└── Projects\ClipNotes\            ← готовое приложение для запуска
-    ├── ClipNotes.exe
-    ├── tools\
-    ├── models\
-    └── licenses\
+└── sessions\                      ← данные записанных сессий (OutputDirectory)
+    └── YYYY-MM-DD_HH-mm-ss\
+        ├── video\
+        ├── audio\
+        ├── txt\
+        ├── table\
+        └── meta\
 ```
 
 ---

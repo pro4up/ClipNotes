@@ -1,7 +1,7 @@
 # Download whisper.cpp GGML model from Hugging Face
 param(
     [string]$ModelName = "large-v3-turbo",
-    [string]$OutputDir = "$PSScriptRoot\..\compile\ClipNotes-win-x64\models"
+    [string]$OutputDir = "$PSScriptRoot\..\..\app\models"
 )
 
 $ErrorActionPreference = "Stop"

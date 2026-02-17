@@ -1,6 +1,6 @@
 # Download FFmpeg essentials build from gyan.dev
 param(
-    [string]$OutputDir = "$PSScriptRoot\..\compile\ClipNotes-win-x64\tools"
+    [string]$OutputDir = "$PSScriptRoot\..\..\app\tools"
 )
 
 $ErrorActionPreference = "Stop"
