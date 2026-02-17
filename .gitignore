@@ -1,7 +1,10 @@
 # Build outputs
 bin/
 obj/
-compile/
+
+# Published app and session data (outside source/)
+../app/
+../sessions/
 
 # User-specific files
 *.user
