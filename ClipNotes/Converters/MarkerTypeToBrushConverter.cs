@@ -9,13 +9,16 @@ public class MarkerTypeToBrushConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        return value is MarkerType mt ? mt switch
+        if (value is not MarkerType mt) return Brushes.Gray;
+        var key = mt switch
         {
-            MarkerType.Bug => new SolidColorBrush(Color.FromRgb(239, 68, 68)),
-            MarkerType.Task => new SolidColorBrush(Color.FromRgb(59, 130, 246)),
-            MarkerType.Note => new SolidColorBrush(Color.FromRgb(34, 197, 94)),
-            _ => Brushes.Gray
-        } : Brushes.Gray;
+            MarkerType.Bug => "BugBrush",
+            MarkerType.Task => "TaskBrush",
+            MarkerType.Note => "NoteBrush",
+            _ => null
+        };
+        return key != null && System.Windows.Application.Current?.TryFindResource(key) is System.Windows.Media.Brush b
+            ? b : Brushes.Gray;
     }
 
     public object ConvertBack(object value, Type targetType, object parameter, CultureInfo culture)

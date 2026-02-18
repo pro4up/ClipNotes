@@ -37,15 +37,25 @@ public class FFmpegService
         CancellationToken ct = default)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
-        var codecArgs = codec.ToLower() switch
-        {
-            "mp3" => $"-c:a libmp3lame -b:a {bitrate}k",
-            "aac" => $"-c:a aac -b:a {bitrate}k",
-            _ => "-c:a pcm_s16le" // wav
-        };
-
         var ic = System.Globalization.CultureInfo.InvariantCulture;
-        var args = $"-y -i \"{masterAudioPath}\" -ss {start.TotalSeconds.ToString("F3", ic)} -t {duration.TotalSeconds.ToString("F3", ic)} {codecArgs} \"{outputPath}\"";
+
+        string args;
+        if (codec.ToLower() == "wav" || codec.ToLower() == "pcm_s16le")
+        {
+            // Fast seek + stream copy: no re-encoding, near-instant for PCM WAV
+            args = $"-y -ss {start.TotalSeconds.ToString("F3", ic)} -i \"{masterAudioPath}\" -t {duration.TotalSeconds.ToString("F3", ic)} -c:a copy \"{outputPath}\"";
+        }
+        else
+        {
+            var codecArgs = codec.ToLower() switch
+            {
+                "mp3" => $"-c:a libmp3lame -b:a {bitrate}k",
+                "aac" => $"-c:a aac -b:a {bitrate}k",
+                _ => $"-c:a pcm_s16le"
+            };
+            args = $"-y -ss {start.TotalSeconds.ToString("F3", ic)} -i \"{masterAudioPath}\" -t {duration.TotalSeconds.ToString("F3", ic)} {codecArgs} \"{outputPath}\"";
+        }
+
         await RunProcessAsync(_ffmpegPath, args, ct);
     }
 

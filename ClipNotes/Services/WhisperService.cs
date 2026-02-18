@@ -15,9 +15,7 @@ public class WhisperService
     }
 
     public async Task<string> TranscribeSegmentAsync(
-        string audioPath,
-        TimeSpan offset,
-        TimeSpan duration,
+        string audioClipPath,
         string outputBasePath,
         string language,
         string? glossary,
@@ -25,11 +23,8 @@ public class WhisperService
     {
         Directory.CreateDirectory(Path.GetDirectoryName(outputBasePath)!);
 
-        var offsetMs = (int)offset.TotalMilliseconds;
-        var durationMs = (int)duration.TotalMilliseconds;
-
-        var args = $"-m \"{_modelPath}\" -f \"{audioPath}\"";
-        args += $" --offset-t {offsetMs} --duration {durationMs}";
+        var threads = Math.Min(Environment.ProcessorCount, 8);
+        var args = $"-m \"{_modelPath}\" -f \"{audioClipPath}\" -t {threads}";
 
         if (language != "auto" && !string.IsNullOrWhiteSpace(language))
             args += $" -l {language}";

@@ -66,6 +66,14 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _manualMarkerTimecode = "00:00:30";
     [ObservableProperty] private MarkerType _manualMarkerType = MarkerType.Note;
 
+    // --- OBS auto-start ---
+    [ObservableProperty] private bool _autoStartObs;
+    [ObservableProperty] private string _obsExePath = "";
+
+    // --- Tray / startup ---
+    [ObservableProperty] private bool _startWithWindows;
+    [ObservableProperty] private bool _minimizeToTray;
+
     // --- Tool validation ---
     [ObservableProperty] private string _toolsStatus = "";
 
@@ -84,7 +92,14 @@ public partial class MainViewModel : ObservableObject
 
     // --- Audio codec options ---
     public string[] AudioCodecOptions { get; } = { "wav", "mp3", "aac" };
-    public string[] ModelOptions { get; } = { "large-v3-turbo", "large-v3", "medium", "small", "base" };
+    public ModelOption[] ModelOptions { get; } =
+    {
+        new("large-v3-turbo", "large-v3-turbo — ~6 GB VRAM"),
+        new("large-v3",       "large-v3 — ~10 GB VRAM"),
+        new("medium",         "medium — ~5 GB VRAM"),
+        new("small",          "small — ~2 GB VRAM"),
+        new("base",           "base — ~1 GB VRAM"),
+    };
     public string[] LanguageOptions { get; } = { "auto", "ru", "en", "de", "fr", "es", "zh", "ja", "ko" };
     public MarkerType[] MarkerTypeOptions { get; } = { MarkerType.Bug, MarkerType.Task, MarkerType.Note };
 
@@ -114,6 +129,14 @@ public partial class MainViewModel : ObservableObject
         LoadSettings();
         SetupToolPaths();
         ValidateTools();
+
+        // Автозапуск OBS.exe если включено
+        if (AutoStartObs && File.Exists(ObsExePath))
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(ObsExePath) { UseShellExecute = true });
+
+        // Авто-подключение OBS если настройки заполнены
+        if (!string.IsNullOrWhiteSpace(ObsHost) && ObsPort > 0)
+            Task.Run(() => _ = TestObsConnectionAsync());
     }
 
     private void SetupToolPaths()
@@ -142,6 +165,26 @@ public partial class MainViewModel : ObservableObject
     {
         SetupToolPaths();
         ValidateTools();
+    }
+
+    partial void OnAutoStartObsChanged(bool value) => SaveSettings();
+
+    partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
+
+    partial void OnStartWithWindowsChanged(bool value)
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                @"SOFTWARE\Microsoft\Windows\CurrentVersion\Run", true);
+            var exePath = Process.GetCurrentProcess().MainModule?.FileName ?? "";
+            if (value)
+                key?.SetValue("ClipNotes", $"\"{exePath}\" --tray");
+            else
+                key?.DeleteValue("ClipNotes", false);
+        }
+        catch (Exception ex) { LogSvc.Warn($"Registry error: {ex.Message}"); }
+        SaveSettings();
     }
 
     private void LoadSettings()
@@ -182,6 +225,11 @@ public partial class MainViewModel : ObservableObject
         foreach (var h in s.SessionHistory.OrderByDescending(x => x.CreatedAt).Take(20))
             SessionHistory.Add(h);
 
+        AutoStartObs = s.AutoStartObs;
+        ObsExePath = s.ObsExePath;
+        StartWithWindows = s.StartWithWindows;
+        MinimizeToTray = s.MinimizeToTray;
+
         // Apply saved theme
         SelectedTheme = s.Theme; // calls OnSelectedThemeChanged → ApplyTheme
     }
@@ -202,6 +250,10 @@ public partial class MainViewModel : ObservableObject
             TranscriptionLanguage = TranscriptionLanguage,
             Glossary = Glossary,
             GlossaryFilePath = GlossaryFilePath,
+            AutoStartObs = AutoStartObs,
+            ObsExePath = ObsExePath,
+            StartWithWindows = StartWithWindows,
+            MinimizeToTray = MinimizeToTray,
             Theme = SelectedTheme,
             Hotkeys = HotkeyBindings.Select(h => new HotkeyBindingData
             {
@@ -268,6 +320,21 @@ public partial class MainViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void BrowseObsExe()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Выберите OBS Studio exe",
+            Filter = "OBS Studio (obs64.exe;obs32.exe)|obs64.exe;obs32.exe|Исполняемые файлы (*.exe)|*.exe"
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            ObsExePath = dialog.FileName;
+            SaveSettings();
+        }
+    }
+
+    [RelayCommand]
     private async Task StartRecordingAsync()
     {
         if (!ObsConnected)
@@ -305,7 +372,7 @@ public partial class MainViewModel : ObservableObject
             Markers.Clear();
             RecordingStatus = "Запись...";
             RecordingTime = "00:00:00";
-            CurrentTab = 1;
+            CurrentTab = 0; // Запись
             _recordingTimer.Start();
         }
         catch (Exception ex)
@@ -363,7 +430,7 @@ public partial class MainViewModel : ObservableObject
 
                 RecordingStatus = "Запись завершена";
                 ReviewReady = true;
-                CurrentTab = 2;
+                CurrentTab = 1; // Экспорт
             }
         }
         catch (Exception ex)
@@ -378,7 +445,7 @@ public partial class MainViewModel : ObservableObject
         if (string.IsNullOrWhiteSpace(OutputRootDirectory))
         {
             ProcessingStatus = "Сначала укажите выходную директорию в настройках";
-            CurrentTab = 0;
+            CurrentTab = 3; // Настройки
             return;
         }
 
@@ -411,7 +478,7 @@ public partial class MainViewModel : ObservableObject
             Markers.Clear();
             ReviewReady = true;
             ProcessingStatus = $"Видео загружено: {Path.GetFileName(dialog.FileName)} ({dur:hh\\:mm\\:ss})";
-            CurrentTab = 2;
+            CurrentTab = 1; // Экспорт
         }
         catch (Exception ex)
         {
@@ -624,4 +691,9 @@ public partial class MainViewModel : ObservableObject
         _obs.Dispose();
         SaveSettings();
     }
+}
+
+public record ModelOption(string Value, string Display)
+{
+    public override string ToString() => Display;
 }

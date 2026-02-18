@@ -19,19 +19,28 @@ public class PipelineService
         _excel = excel;
     }
 
+    private record MarkerWork(
+        Marker Marker,
+        string BaseName,
+        string Ext,
+        string FinalClipPath,
+        string? TranscribeWavPath,
+        bool DeleteFinalAfterTranscription,
+        TimeSpan ClipStart,
+        TimeSpan ClipDuration);
+
     public async Task RunAsync(SessionData session, CancellationToken ct = default)
     {
         var settings = session.SettingsSnapshot;
         var videoPath = session.VideoFilePath
             ?? throw new InvalidOperationException("Видеофайл не найден");
 
-        // 1. Extract master audio
+        // 1. Extract master audio (once)
         StatusChanged?.Invoke("Извлечение аудио из видео...");
         var masterAudio = Path.Combine(session.SessionFolder, "audio", "master.wav");
         await _ffmpeg.ExtractMasterAudioAsync(videoPath, masterAudio, ct);
         session.MasterAudioPath = masterAudio;
 
-        // Get actual duration from master audio
         var actualDuration = await _ffmpeg.GetDurationAsync(masterAudio, ct);
         if (actualDuration > TimeSpan.Zero)
             session.Duration = actualDuration;
@@ -40,67 +49,116 @@ public class PipelineService
         if (!string.IsNullOrWhiteSpace(settings.GlossaryFilePath) && File.Exists(settings.GlossaryFilePath))
             glossary = await File.ReadAllTextAsync(settings.GlossaryFilePath, ct);
 
-        // 2. Process each marker
         var markersToProcess = session.Markers.Where(m => m.GenerateAudio || m.GenerateText).ToList();
-        for (int i = 0; i < markersToProcess.Count; i++)
+        if (markersToProcess.Count == 0)
         {
-            var marker = markersToProcess[i];
-            ct.ThrowIfCancellationRequested();
+            StatusChanged?.Invoke("Нет маркеров для обработки.");
+            return;
+        }
 
-            StatusChanged?.Invoke($"Обработка маркера {i + 1}/{markersToProcess.Count}: {marker.Type} @ {marker.TimestampFormatted}");
-            ProgressChanged?.Invoke(i, markersToProcess.Count);
-
+        // 2. Build work items (determine clip bounds and output paths)
+        var works = new List<MarkerWork>(markersToProcess.Count);
+        foreach (var marker in markersToProcess)
+        {
             var pre = TimeSpan.FromSeconds(settings.PreSeconds);
             var post = TimeSpan.FromSeconds(settings.PostSeconds);
-
             var clipStart = marker.Timestamp - pre;
             if (clipStart < TimeSpan.Zero) clipStart = TimeSpan.Zero;
-
             var clipEnd = marker.Timestamp + post;
             if (clipEnd > session.Duration) clipEnd = session.Duration;
-
             var clipDuration = clipEnd - clipStart;
             if (clipDuration <= TimeSpan.Zero) continue;
 
             var baseName = $"{marker.Index:D3}_{marker.Type}_{marker.Timestamp:hh\\-mm\\-ss}";
-
-            // Audio clip
-            if (marker.GenerateAudio)
+            var ext = settings.AudioCodec.ToLower() switch
             {
-                var ext = settings.AudioCodec.ToLower() switch
-                {
-                    "mp3" => ".mp3",
-                    "aac" => ".m4a",
-                    _ => ".wav"
-                };
-                var audioClipPath = Path.Combine(session.SessionFolder, "audio", baseName + ext);
-                await _ffmpeg.ExtractAudioClipAsync(masterAudio, audioClipPath,
-                    clipStart, clipDuration, settings.AudioCodec, settings.AudioBitrate, ct);
-                marker.AudioFilePath = Path.Combine("audio", baseName + ext);
-            }
+                "mp3" => ".mp3",
+                "aac" => ".m4a",
+                _ => ".wav"
+            };
+            var finalClipPath = Path.Combine(session.SessionFolder, "audio", baseName + ext);
+            string? transcribeWavPath = null;
+            bool deleteFinalAfterTranscription = false;
 
-            // Transcription
             if (marker.GenerateText)
             {
-                var txtBasePath = Path.Combine(session.SessionFolder, "txt", baseName);
+                if (ext == ".wav" && !marker.GenerateAudio)
+                    // Text-only + WAV: cut final, delete after transcription
+                    deleteFinalAfterTranscription = true;
+                else if (ext != ".wav")
+                    // mp3/aac: need separate temp WAV for Whisper
+                    transcribeWavPath = Path.Combine(session.SessionFolder, "audio", baseName + "_tmp.wav");
+                // ext==".wav" && GenerateAudio: reuse finalClipPath — no extra cut
+            }
+
+            works.Add(new MarkerWork(marker, baseName, ext, finalClipPath,
+                transcribeWavPath, deleteFinalAfterTranscription, clipStart, clipDuration));
+        }
+
+        // 3. Phase 1: Cut all clips in parallel (FFmpeg is CPU/IO bound, parallelize safely)
+        StatusChanged?.Invoke("Нарезка аудиоклипов...");
+        await Parallel.ForEachAsync(
+            works,
+            new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = ct },
+            async (work, pct) =>
+            {
+                // Cut final clip (if needed for audio output or text-only WAV)
+                if (work.Marker.GenerateAudio || (work.Marker.GenerateText && work.Ext == ".wav"))
+                {
+                    await _ffmpeg.ExtractAudioClipAsync(masterAudio, work.FinalClipPath,
+                        work.ClipStart, work.ClipDuration, settings.AudioCodec, settings.AudioBitrate, pct);
+                }
+
+                // Cut temp WAV for transcription (mp3/aac case)
+                if (work.TranscribeWavPath != null)
+                {
+                    await _ffmpeg.ExtractAudioClipAsync(masterAudio, work.TranscribeWavPath,
+                        work.ClipStart, work.ClipDuration, "wav", settings.AudioBitrate, pct);
+                }
+            });
+
+        // 4. Phase 2: Transcribe sequentially (Whisper/GPU can't be shared across processes)
+        for (int i = 0; i < works.Count; i++)
+        {
+            ct.ThrowIfCancellationRequested();
+            var work = works[i];
+            var marker = work.Marker;
+
+            StatusChanged?.Invoke($"Транскрипция {i + 1}/{works.Count}: {marker.Type} @ {marker.TimestampFormatted}");
+            ProgressChanged?.Invoke(i, works.Count);
+
+            if (marker.GenerateAudio)
+                marker.AudioFilePath = Path.Combine("audio", work.BaseName + work.Ext);
+
+            if (marker.GenerateText)
+            {
+                var transcribePath = work.TranscribeWavPath ?? work.FinalClipPath;
+                var txtBasePath = Path.Combine(session.SessionFolder, "txt", work.BaseName);
+
                 var text = await _whisper.TranscribeSegmentAsync(
-                    masterAudio, clipStart, clipDuration,
-                    txtBasePath, settings.TranscriptionLanguage, glossary, ct);
+                    transcribePath, txtBasePath, settings.TranscriptionLanguage, glossary, ct);
                 marker.Text = text.Trim();
-                marker.TextFilePath = Path.Combine("txt", baseName + ".txt");
+                marker.TextFilePath = Path.Combine("txt", work.BaseName + ".txt");
+
+                // Cleanup temp files
+                if (work.TranscribeWavPath != null && File.Exists(work.TranscribeWavPath))
+                    File.Delete(work.TranscribeWavPath);
+
+                if (work.DeleteFinalAfterTranscription && File.Exists(work.FinalClipPath))
+                    File.Delete(work.FinalClipPath);
             }
         }
 
-        // 3. Generate Excel
+        // 5. Generate Excel
         StatusChanged?.Invoke("Создание Excel-отчёта...");
         var xlsxPath = Path.Combine(session.SessionFolder, "table", "ClipNotes.xlsx");
         _excel.GenerateReport(session, xlsxPath);
 
-        // 4. Save meta
+        // 6. Save meta
         StatusChanged?.Invoke("Сохранение метаданных сессии...");
         new SessionService().SaveSessionMeta(session);
 
-        ProgressChanged?.Invoke(markersToProcess.Count, markersToProcess.Count);
+        ProgressChanged?.Invoke(works.Count, works.Count);
         StatusChanged?.Invoke("Готово!");
     }
 }

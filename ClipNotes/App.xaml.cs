@@ -1,12 +1,16 @@
 using System.Windows;
 using System.Windows.Media;
 using ClipNotes.Services;
+using ClipNotes.Views;
 
 namespace ClipNotes;
 
 public partial class App : Application
 {
     public static bool IsDark { get; private set; }
+
+    private System.Windows.Forms.NotifyIcon? _trayIcon;
+    private MainWindow? _mainWindow;
 
     protected override void OnStartup(StartupEventArgs e)
     {
@@ -31,6 +35,64 @@ public partial class App : Application
             LogService.Error("Unobserved task exception", args.Exception);
             args.SetObserved();
         };
+
+        InitTrayIcon();
+
+        bool startHidden = e.Args.Contains("--tray");
+
+        _mainWindow = new MainWindow();
+        MainWindow = _mainWindow;
+
+        // Always Show first so Window.Loaded fires (hotkeys init), then hide if --tray
+        _mainWindow.Show();
+        if (startHidden)
+            HideToTray();
+    }
+
+    protected override void OnExit(ExitEventArgs e)
+    {
+        _trayIcon?.Dispose();
+        base.OnExit(e);
+    }
+
+    // Called by MainWindow.StateChanged when minimized and MinimizeToTray is on
+    public void HideToTray()
+    {
+        _mainWindow?.Hide();
+        if (_trayIcon != null)
+            _trayIcon.Visible = true;
+    }
+
+    private void ShowMainWindow()
+    {
+        if (_mainWindow == null) return;
+        _mainWindow.Show();
+        _mainWindow.WindowState = WindowState.Normal;
+        _mainWindow.Activate();
+        if (_trayIcon != null)
+            _trayIcon.Visible = false;
+    }
+
+    private void InitTrayIcon()
+    {
+        _trayIcon = new System.Windows.Forms.NotifyIcon
+        {
+            Icon = System.Drawing.SystemIcons.Application,
+            Text = "ClipNotes",
+            Visible = false
+        };
+
+        var menu = new System.Windows.Forms.ContextMenuStrip();
+        menu.Items.Add("Открыть", null, (s, ev) => Dispatcher.Invoke(ShowMainWindow));
+        menu.Items.Add(new System.Windows.Forms.ToolStripSeparator());
+        menu.Items.Add("Выход", null, (s, ev) => Dispatcher.Invoke(() =>
+        {
+            _trayIcon!.Visible = false;
+            Shutdown();
+        }));
+
+        _trayIcon.ContextMenuStrip = menu;
+        _trayIcon.DoubleClick += (s, ev) => Dispatcher.Invoke(ShowMainWindow);
     }
 
     public static void ApplyTheme(bool dark)
@@ -40,35 +102,49 @@ public partial class App : Application
 
         if (dark)
         {
-            r["BgBrush"]           = Brush(0x1C, 0x1C, 0x1E);
-            r["CardBrush"]         = Brush(0x2C, 0x2C, 0x2E);
-            r["AccentBrush"]       = Brush(0x0A, 0x84, 0xFF);
-            r["DangerBrush"]       = Brush(0xFF, 0x45, 0x3A);
-            r["SuccessBrush"]      = Brush(0x30, 0xD1, 0x58);
-            r["TextPrimaryBrush"]  = Brush(0xFF, 0xFF, 0xFF);
-            r["TextSecondaryBrush"]= Brush(0xAE, 0xAE, 0xB2);
-            r["BorderBrush"]       = Brush(0x3A, 0x3A, 0x3C);
-            r["SeparatorBrush"]    = Brush(0x48, 0x48, 0x4A);
-            r["InputBgBrush"]      = Brush(0x3A, 0x3A, 0x3C);
-            r["InfoBannerBgBrush"] = Brush(0x0A, 0x28, 0x40);
+            r["BgBrush"]               = Brush(0x1C, 0x1C, 0x1E);
+            r["CardBrush"]             = Brush(0x2C, 0x2C, 0x2E);
+            r["AccentBrush"]           = Brush(0x0A, 0x84, 0xFF);
+            r["DangerBrush"]           = Brush(0xFF, 0x45, 0x3A);
+            r["SuccessBrush"]          = Brush(0x30, 0xD1, 0x58);
+            r["TextPrimaryBrush"]      = Brush(0xFF, 0xFF, 0xFF);
+            r["TextSecondaryBrush"]    = Brush(0xAE, 0xAE, 0xB2);
+            r["BorderBrush"]           = Brush(0x3A, 0x3A, 0x3C);
+            r["SeparatorBrush"]        = Brush(0x48, 0x48, 0x4A);
+            r["InputBgBrush"]          = Brush(0x3A, 0x3A, 0x3C);
+            r["InfoBannerBgBrush"]     = Brush(0x0A, 0x28, 0x40);
             r["InfoBannerBorderBrush"] = Brush(0x1A, 0x4A, 0x7A);
-            r["InfoBannerFgBrush"] = Brush(0x7E, 0xC8, 0xF4);
+            r["InfoBannerFgBrush"]     = Brush(0x7E, 0xC8, 0xF4);
+            // Marker buttons — muted for dark
+            r["BugBrush"]              = Brush(0xB9, 0x1C, 0x1C);
+            r["TaskBrush"]             = Brush(0x1D, 0x4E, 0xD8);
+            r["NoteBrush"]             = Brush(0x15, 0x80, 0x3D);
+            // Scrollbar
+            r["ScrollBarThumbBrush"]   = Brush(0x48, 0x48, 0x4A);
+            r["ScrollBarTrackBrush"]   = Brush(0x2C, 0x2C, 0x2E);
         }
         else
         {
-            r["BgBrush"]           = Brush(0xFA, 0xFA, 0xFA);
-            r["CardBrush"]         = Brush(0xFF, 0xFF, 0xFF);
-            r["AccentBrush"]       = Brush(0x00, 0x7A, 0xFF);
-            r["DangerBrush"]       = Brush(0xFF, 0x3B, 0x30);
-            r["SuccessBrush"]      = Brush(0x34, 0xC7, 0x59);
-            r["TextPrimaryBrush"]  = Brush(0x1C, 0x1C, 0x1E);
-            r["TextSecondaryBrush"]= Brush(0x8E, 0x8E, 0x93);
-            r["BorderBrush"]       = Brush(0xE5, 0xE5, 0xEA);
-            r["SeparatorBrush"]    = Brush(0xF2, 0xF2, 0xF7);
-            r["InputBgBrush"]      = Brush(0xFF, 0xFF, 0xFF);
-            r["InfoBannerBgBrush"] = Brush(0xF0, 0xF7, 0xFF);
+            r["BgBrush"]               = Brush(0xFA, 0xFA, 0xFA);
+            r["CardBrush"]             = Brush(0xFF, 0xFF, 0xFF);
+            r["AccentBrush"]           = Brush(0x00, 0x7A, 0xFF);
+            r["DangerBrush"]           = Brush(0xFF, 0x3B, 0x30);
+            r["SuccessBrush"]          = Brush(0x34, 0xC7, 0x59);
+            r["TextPrimaryBrush"]      = Brush(0x1C, 0x1C, 0x1E);
+            r["TextSecondaryBrush"]    = Brush(0x8E, 0x8E, 0x93);
+            r["BorderBrush"]           = Brush(0xE5, 0xE5, 0xEA);
+            r["SeparatorBrush"]        = Brush(0xF2, 0xF2, 0xF7);
+            r["InputBgBrush"]          = Brush(0xFF, 0xFF, 0xFF);
+            r["InfoBannerBgBrush"]     = Brush(0xF0, 0xF7, 0xFF);
             r["InfoBannerBorderBrush"] = Brush(0xB0, 0xD4, 0xF0);
-            r["InfoBannerFgBrush"] = Brush(0x1A, 0x4A, 0x7A);
+            r["InfoBannerFgBrush"]     = Brush(0x1A, 0x4A, 0x7A);
+            // Marker buttons — vivid for light
+            r["BugBrush"]              = Brush(0xEF, 0x44, 0x44);
+            r["TaskBrush"]             = Brush(0x3B, 0x82, 0xF6);
+            r["NoteBrush"]             = Brush(0x22, 0xC5, 0x5E);
+            // Scrollbar
+            r["ScrollBarThumbBrush"]   = Brush(0xC7, 0xC7, 0xCC);
+            r["ScrollBarTrackBrush"]   = Brush(0xFA, 0xFA, 0xFA);
         }
     }
 

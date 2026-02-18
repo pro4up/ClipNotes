@@ -7,190 +7,19 @@
         MinHeight="600" MinWidth="750"
         Background="{DynamicResource BgBrush}"
         WindowStartupLocation="CenterScreen"
-        Loaded="Window_Loaded" Closing="Window_Closing">
+        UseLayoutRounding="True"
+        TextOptions.TextFormattingMode="Display"
+        TextOptions.TextRenderingMode="ClearType"
+        RenderOptions.ClearTypeHint="Enabled"
+        Loaded="Window_Loaded" Closing="Window_Closing"
+        StateChanged="Window_StateChanged">
     <Window.DataContext>
         <vm:MainViewModel/>
     </Window.DataContext>
     <Grid>
         <TabControl SelectedIndex="{Binding CurrentTab}" Margin="0" BorderThickness="0" Background="Transparent">
-            <!-- ==================== SETUP TAB ==================== -->
-            <TabItem Header="Настройки">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32,24">
-                    <StackPanel MaxWidth="640" Margin="32,24">
-                        <TextBlock Style="{StaticResource Heading}" Text="Настройки"/>
 
-                        <!-- Tool status banner -->
-                        <Border Background="{DynamicResource InfoBannerBgBrush}"
-                                BorderBrush="{DynamicResource InfoBannerBorderBrush}"
-                                BorderThickness="1" CornerRadius="8"
-                                Padding="12,8" Margin="0,0,0,12">
-                            <TextBlock Text="{Binding ToolsStatus}" Style="{StaticResource BaseText}"
-                                       Foreground="{DynamicResource InfoBannerFgBrush}"
-                                       TextWrapping="Wrap" FontSize="13"/>
-                        </Border>
-
-                        <!-- OBS Connection -->
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SubHeading}" Text="OBS WebSocket"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="100"/>
-                                    </Grid.ColumnDefinitions>
-                                    <Grid.RowDefinitions>
-                                        <RowDefinition/>
-                                        <RowDefinition Height="8"/>
-                                        <RowDefinition/>
-                                        <RowDefinition Height="8"/>
-                                        <RowDefinition/>
-                                    </Grid.RowDefinitions>
-
-                                    <StackPanel Grid.Row="0" Grid.Column="0">
-                                        <TextBlock Style="{StaticResource Label}" Text="Хост"/>
-                                        <TextBox Text="{Binding ObsHost, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Row="0" Grid.Column="2">
-                                        <TextBlock Style="{StaticResource Label}" Text="Порт"/>
-                                        <TextBox Text="{Binding ObsPort, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="3">
-                                        <TextBlock Style="{StaticResource Label}" Text="Пароль (если установлен)"/>
-                                        <TextBox Text="{Binding ObsPassword, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-
-                                    <StackPanel Grid.Row="4" Grid.ColumnSpan="3" Orientation="Horizontal">
-                                        <Button Style="{StaticResource PrimaryButton}" Content="Проверить соединение"
-                                                Command="{Binding TestObsConnectionCommand}"/>
-                                        <TextBlock VerticalAlignment="Center" Margin="16,0,0,0"
-                                                   Text="{Binding ObsStatus}" Style="{StaticResource BaseText}"/>
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Output Directory -->
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SubHeading}" Text="Выходная директория"/>
-                                <DockPanel>
-                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
-                                            Content="Обзор" Command="{Binding BrowseOutputDirectoryCommand}" Margin="8,0,0,0"/>
-                                    <TextBox Text="{Binding OutputRootDirectory, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True"/>
-                                </DockPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Audio and Timing -->
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SubHeading}" Text="Аудио и таймкоды"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Style="{StaticResource Label}" Text="До (сек)"/>
-                                        <TextBox Text="{Binding PreSeconds, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Style="{StaticResource Label}" Text="После (сек)"/>
-                                        <TextBox Text="{Binding PostSeconds, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="4">
-                                        <TextBlock Style="{StaticResource Label}" Text="Формат"/>
-                                        <ComboBox ItemsSource="{Binding AudioCodecOptions}" SelectedItem="{Binding AudioCodec}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="6">
-                                        <TextBlock Style="{StaticResource Label}" Text="Битрейт (kbps)"/>
-                                        <TextBox Text="{Binding AudioBitrate, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
-                                </Grid>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Transcription -->
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SubHeading}" Text="Транскрипция"/>
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                    </Grid.ColumnDefinitions>
-                                    <StackPanel Grid.Column="0">
-                                        <TextBlock Style="{StaticResource Label}" Text="Модель"/>
-                                        <ComboBox ItemsSource="{Binding ModelOptions}" SelectedItem="{Binding WhisperModel}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="2">
-                                        <TextBlock Style="{StaticResource Label}" Text="Язык"/>
-                                        <ComboBox ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding TranscriptionLanguage}"/>
-                                    </StackPanel>
-                                </Grid>
-                                <TextBlock Style="{StaticResource Label}" Text="Глоссарий / промпт" Margin="0,12,0,4"/>
-                                <TextBox Text="{Binding Glossary, UpdateSourceTrigger=PropertyChanged}"
-                                         AcceptsReturn="True" Height="60" TextWrapping="Wrap"
-                                         VerticalScrollBarVisibility="Auto"/>
-                                <TextBlock Style="{StaticResource Label}" Text="Или путь к файлу глоссария" Margin="0,8,0,4"/>
-                                <TextBox Text="{Binding GlossaryFilePath, UpdateSourceTrigger=PropertyChanged}"/>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Theme -->
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SubHeading}" Text="Оформление"/>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Style="{StaticResource Label}" Text="Тема:" VerticalAlignment="Center"
-                                               Margin="0,0,12,0"/>
-                                    <ComboBox ItemsSource="{Binding ThemeOptions}"
-                                              SelectedItem="{Binding SelectedTheme}"
-                                              Width="130"/>
-                                </StackPanel>
-                            </StackPanel>
-                        </Border>
-
-                        <!-- Hotkeys -->
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SubHeading}" Text="Горячие клавиши"/>
-                                <TextBlock Style="{StaticResource Label}" Text="Кликните на поле и нажмите нужную комбинацию клавиш" Margin="0,0,0,8"/>
-                                <ItemsControl ItemsSource="{Binding HotkeyBindings}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <Grid Margin="0,0,0,6">
-                                                <Grid.ColumnDefinitions>
-                                                    <ColumnDefinition Width="180"/>
-                                                    <ColumnDefinition Width="*"/>
-                                                </Grid.ColumnDefinitions>
-                                                <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
-                                                           Style="{StaticResource BaseText}" VerticalAlignment="Center"/>
-                                                <TextBox Grid.Column="1" Text="{Binding HotkeyText, Mode=OneWay}"
-                                                         IsReadOnly="True" PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
-                                                         GotFocus="HotkeyTextBox_GotFocus"
-                                                         LostFocus="HotkeyTextBox_LostFocus"
-                                                         Tag="{Binding}" Cursor="Hand"/>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </ScrollViewer>
-            </TabItem>
-
-            <!-- ==================== RECORDING TAB ==================== -->
+            <!-- ==================== RECORDING TAB (0) ==================== -->
             <TabItem Header="Запись">
                 <Grid Margin="32,24">
                     <Grid.RowDefinitions>
@@ -228,11 +57,14 @@
                         <StackPanel>
                             <TextBlock Style="{StaticResource SubHeading}" Text="Добавить маркер"/>
                             <StackPanel Orientation="Horizontal">
-                                <Button Style="{StaticResource MarkerButton}" Content="Bug" Background="#EF4444"
+                                <Button Style="{StaticResource MarkerButton}" Content="Bug"
+                                        Background="{DynamicResource BugBrush}"
                                         Command="{Binding AddMarkerCommand}" CommandParameter="{x:Static models:MarkerType.Bug}"/>
-                                <Button Style="{StaticResource MarkerButton}" Content="Task" Background="#3B82F6"
+                                <Button Style="{StaticResource MarkerButton}" Content="Task"
+                                        Background="{DynamicResource TaskBrush}"
                                         Command="{Binding AddMarkerCommand}" CommandParameter="{x:Static models:MarkerType.Task}"/>
-                                <Button Style="{StaticResource MarkerButton}" Content="Note" Background="#22C55E"
+                                <Button Style="{StaticResource MarkerButton}" Content="Note"
+                                        Background="{DynamicResource NoteBrush}"
                                         Command="{Binding AddMarkerCommand}" CommandParameter="{x:Static models:MarkerType.Note}"/>
                             </StackPanel>
                         </StackPanel>
@@ -271,7 +103,7 @@
                 </Grid>
             </TabItem>
 
-            <!-- ==================== REVIEW/EXPORT TAB ==================== -->
+            <!-- ==================== REVIEW/EXPORT TAB (1) ==================== -->
             <TabItem Header="Экспорт">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
                     <StackPanel Margin="32,24" MaxWidth="820">
@@ -373,7 +205,7 @@
                 </ScrollViewer>
             </TabItem>
 
-            <!-- ==================== HISTORY TAB ==================== -->
+            <!-- ==================== HISTORY TAB (2) ==================== -->
             <TabItem Header="История">
                 <Grid Margin="32,24">
                     <Grid.RowDefinitions>
@@ -412,6 +244,202 @@
                     </Border>
                 </Grid>
             </TabItem>
+
+            <!-- ==================== SETUP TAB (3) ==================== -->
+            <TabItem Header="Настройки">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32,24">
+                    <StackPanel MaxWidth="640" Margin="32,24">
+                        <TextBlock Style="{StaticResource Heading}" Text="Настройки"/>
+
+                        <!-- Tool status banner -->
+                        <Border Background="{DynamicResource InfoBannerBgBrush}"
+                                BorderBrush="{DynamicResource InfoBannerBorderBrush}"
+                                BorderThickness="1" CornerRadius="8"
+                                Padding="12,8" Margin="0,0,0,12">
+                            <TextBlock Text="{Binding ToolsStatus}" Style="{StaticResource BaseText}"
+                                       Foreground="{DynamicResource InfoBannerFgBrush}"
+                                       TextWrapping="Wrap" FontSize="13"/>
+                        </Border>
+
+                        <!-- OBS Connection -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="OBS WebSocket"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="100"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition/>
+                                        <RowDefinition Height="8"/>
+                                        <RowDefinition/>
+                                        <RowDefinition Height="8"/>
+                                        <RowDefinition/>
+                                    </Grid.RowDefinitions>
+
+                                    <StackPanel Grid.Row="0" Grid.Column="0">
+                                        <TextBlock Style="{StaticResource Label}" Text="Хост"/>
+                                        <TextBox Text="{Binding ObsHost, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="0" Grid.Column="2">
+                                        <TextBlock Style="{StaticResource Label}" Text="Порт"/>
+                                        <TextBox Text="{Binding ObsPort, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="2" Grid.ColumnSpan="3">
+                                        <TextBlock Style="{StaticResource Label}" Text="Пароль (если установлен)"/>
+                                        <TextBox Text="{Binding ObsPassword, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+
+                                    <StackPanel Grid.Row="4" Grid.ColumnSpan="3" Orientation="Horizontal">
+                                        <Button Style="{StaticResource PrimaryButton}" Content="Проверить соединение"
+                                                Command="{Binding TestObsConnectionCommand}"/>
+                                        <TextBlock VerticalAlignment="Center" Margin="16,0,0,0"
+                                                   Text="{Binding ObsStatus}" Style="{StaticResource BaseText}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <CheckBox Content="Автозапуск OBS при старте приложения"
+                                          IsChecked="{Binding AutoStartObs}"
+                                          Margin="0,12,0,8"/>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                            Content="Обзор" Margin="8,0,0,0"
+                                            Command="{Binding BrowseObsExeCommand}"/>
+                                    <TextBox Text="{Binding ObsExePath, UpdateSourceTrigger=PropertyChanged}"
+                                             IsReadOnly="True"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Output Directory -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="Выходная директория"/>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                            Content="Обзор" Command="{Binding BrowseOutputDirectoryCommand}" Margin="8,0,0,0"/>
+                                    <TextBox Text="{Binding OutputRootDirectory, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True"/>
+                                </DockPanel>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Audio and Timing -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="Аудио и таймкоды"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Style="{StaticResource Label}" Text="До (сек)"/>
+                                        <TextBox Text="{Binding PreSeconds, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Style="{StaticResource Label}" Text="После (сек)"/>
+                                        <TextBox Text="{Binding PostSeconds, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="4">
+                                        <TextBlock Style="{StaticResource Label}" Text="Формат"/>
+                                        <ComboBox ItemsSource="{Binding AudioCodecOptions}" SelectedItem="{Binding AudioCodec}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="6">
+                                        <TextBlock Style="{StaticResource Label}" Text="Битрейт (kbps)"/>
+                                        <TextBox Text="{Binding AudioBitrate, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Transcription -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="Транскрипция"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Style="{StaticResource Label}" Text="Модель"/>
+                                        <ComboBox ItemsSource="{Binding ModelOptions}"
+                                                  DisplayMemberPath="Display"
+                                                  SelectedValuePath="Value"
+                                                  SelectedValue="{Binding WhisperModel}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Style="{StaticResource Label}" Text="Язык"/>
+                                        <ComboBox ItemsSource="{Binding LanguageOptions}" SelectedItem="{Binding TranscriptionLanguage}"/>
+                                    </StackPanel>
+                                </Grid>
+                                <TextBlock Style="{StaticResource Label}" Text="Глоссарий / промпт" Margin="0,12,0,4"/>
+                                <TextBox Text="{Binding Glossary, UpdateSourceTrigger=PropertyChanged}"
+                                         AcceptsReturn="True" Height="60" TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto"/>
+                                <TextBlock Style="{StaticResource Label}" Text="Или путь к файлу глоссария" Margin="0,8,0,4"/>
+                                <TextBox Text="{Binding GlossaryFilePath, UpdateSourceTrigger=PropertyChanged}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Theme -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="Оформление"/>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
+                                    <TextBlock Style="{StaticResource Label}" Text="Тема:" VerticalAlignment="Center"
+                                               Margin="0,0,12,0"/>
+                                    <ComboBox ItemsSource="{Binding ThemeOptions}"
+                                              SelectedItem="{Binding SelectedTheme}"
+                                              Width="130"/>
+                                </StackPanel>
+                                <CheckBox Content="Автозапуск вместе с Windows"
+                                          IsChecked="{Binding StartWithWindows}"
+                                          Margin="0,0,0,8"/>
+                                <CheckBox Content="Сворачивать в трей"
+                                          IsChecked="{Binding MinimizeToTray}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- Hotkeys -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="Горячие клавиши"/>
+                                <TextBlock Style="{StaticResource Label}" Text="Кликните на поле и нажмите нужную комбинацию клавиш" Margin="0,0,0,8"/>
+                                <ItemsControl ItemsSource="{Binding HotkeyBindings}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <Grid Margin="0,0,0,6">
+                                                <Grid.ColumnDefinitions>
+                                                    <ColumnDefinition Width="180"/>
+                                                    <ColumnDefinition Width="*"/>
+                                                </Grid.ColumnDefinitions>
+                                                <TextBlock Grid.Column="0" Text="{Binding DisplayName}"
+                                                           Style="{StaticResource BaseText}" VerticalAlignment="Center"/>
+                                                <TextBox Grid.Column="1" Text="{Binding HotkeyText, Mode=OneWay}"
+                                                         IsReadOnly="True" PreviewKeyDown="HotkeyTextBox_PreviewKeyDown"
+                                                         GotFocus="HotkeyTextBox_GotFocus"
+                                                         LostFocus="HotkeyTextBox_LostFocus"
+                                                         Tag="{Binding}" Cursor="Hand"/>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
         </TabControl>
     </Grid>
 </Window>

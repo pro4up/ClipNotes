@@ -3,6 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using ClipNotes.Models;
 using ClipNotes.ViewModels;
+using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
 namespace ClipNotes.Views;
 
@@ -18,6 +19,12 @@ public partial class MainWindow : Window
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         ViewModel.InitializeHotkeys(this);
+    }
+
+    private void Window_StateChanged(object sender, EventArgs e)
+    {
+        if (WindowState == WindowState.Minimized && ViewModel.MinimizeToTray)
+            ((App)Application.Current).HideToTray();
     }
 
     private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)

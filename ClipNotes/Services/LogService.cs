@@ -1,12 +1,12 @@
+using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 
 namespace ClipNotes.Services;
 
 public static class LogService
 {
     private static readonly string LogDir = Path.Combine(
-        Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".", "Logs");
+        Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName) ?? ".", "Logs");
 
     public static void Info(string message) => Write("INFO", message);
     public static void Warn(string message) => Write("WARN", message);

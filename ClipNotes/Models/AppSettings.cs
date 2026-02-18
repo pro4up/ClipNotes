@@ -27,6 +27,14 @@ public class AppSettings
     // Hotkeys
     public List<HotkeyBindingData> Hotkeys { get; set; } = GetDefaultHotkeys();
 
+    // OBS auto-start
+    public bool AutoStartObs { get; set; } = false;
+    public string ObsExePath { get; set; } = "";
+
+    // Tray / startup
+    public bool StartWithWindows { get; set; } = false;
+    public bool MinimizeToTray { get; set; } = false;
+
     // Theme
     public string Theme { get; set; } = "Светлая";
 
