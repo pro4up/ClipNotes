@@ -19,6 +19,7 @@ public partial class MainWindow : Window
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
         ViewModel.InitializeHotkeys(this);
+        App.ApplyTitleBarTheme(this, App.IsDark);
     }
 
     private void Window_StateChanged(object sender, EventArgs e)

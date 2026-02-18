@@ -40,6 +40,8 @@ public class AppSettings
 
     // History
     public List<SessionHistoryEntry> SessionHistory { get; set; } = new();
+    public int MaxHistoryCount { get; set; } = 20;
+    public bool DeleteFilesOnClear { get; set; } = false;
 
     public static List<HotkeyBindingData> GetDefaultHotkeys() => new()
     {

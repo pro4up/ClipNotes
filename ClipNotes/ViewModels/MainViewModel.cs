@@ -79,6 +79,8 @@ public partial class MainViewModel : ObservableObject
 
     // --- History ---
     public ObservableCollection<SessionHistoryEntry> SessionHistory { get; } = new();
+    [ObservableProperty] private int _maxHistoryCount = 20;
+    [ObservableProperty] private bool _deleteFilesOnClear;
 
     // --- Theme ---
     [ObservableProperty] private string _selectedTheme = "Светлая";
@@ -222,13 +224,15 @@ public partial class MainViewModel : ObservableObject
         }
 
         SessionHistory.Clear();
-        foreach (var h in s.SessionHistory.OrderByDescending(x => x.CreatedAt).Take(20))
+        MaxHistoryCount = s.MaxHistoryCount;
+        foreach (var h in s.SessionHistory.OrderByDescending(x => x.CreatedAt).Take(MaxHistoryCount))
             SessionHistory.Add(h);
 
         AutoStartObs = s.AutoStartObs;
         ObsExePath = s.ObsExePath;
         StartWithWindows = s.StartWithWindows;
         MinimizeToTray = s.MinimizeToTray;
+        DeleteFilesOnClear = s.DeleteFilesOnClear;
 
         // Apply saved theme
         SelectedTheme = s.Theme; // calls OnSelectedThemeChanged → ApplyTheme
@@ -261,6 +265,8 @@ public partial class MainViewModel : ObservableObject
                 Key = (int)h.Key,
                 Modifiers = (int)h.Modifiers
             }).ToList(),
+            MaxHistoryCount = MaxHistoryCount,
+            DeleteFilesOnClear = DeleteFilesOnClear,
             SessionHistory = SessionHistory.ToList()
         };
         _settingsService.Save(s);
@@ -317,6 +323,40 @@ public partial class MainViewModel : ObservableObject
             OutputRootDirectory = dialog.FolderName;
             SaveSettings();
         }
+    }
+
+    [RelayCommand]
+    private void BrowseGlossaryFile()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Выберите файл глоссария",
+            Filter = "Текстовые файлы (*.txt)|*.txt|Все файлы (*.*)|*.*"
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            GlossaryFilePath = dialog.FileName;
+            SaveSettings();
+        }
+    }
+
+    [RelayCommand]
+    private void ClearHistory()
+    {
+        if (DeleteFilesOnClear)
+        {
+            foreach (var entry in SessionHistory)
+            {
+                try
+                {
+                    if (Directory.Exists(entry.FolderPath))
+                        Directory.Delete(entry.FolderPath, true);
+                }
+                catch (Exception ex) { LogSvc.Warn($"ClearHistory delete failed: {ex.Message}"); }
+            }
+        }
+        SessionHistory.Clear();
+        SaveSettings();
     }
 
     [RelayCommand]

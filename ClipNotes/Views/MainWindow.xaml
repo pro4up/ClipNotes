@@ -4,7 +4,7 @@
         xmlns:vm="clr-namespace:ClipNotes.ViewModels"
         xmlns:models="clr-namespace:ClipNotes.Models"
         Title="ClipNotes" Height="780" Width="900"
-        Icon="/Resources/icon.ico"
+        Icon="pack://application:,,,/Resources/icon.ico"
         MinHeight="600" MinWidth="750"
         Background="{DynamicResource BgBrush}"
         WindowStartupLocation="CenterScreen"
@@ -127,7 +127,16 @@
                                              Width="110" Margin="0,0,8,0" FontFamily="Consolas"/>
                                     <ComboBox ItemsSource="{Binding MarkerTypeOptions}"
                                               SelectedItem="{Binding ManualMarkerType}"
-                                              Width="100" Margin="0,0,8,0"/>
+                                              Width="100" Margin="0,0,8,0">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <Border Padding="4,2" CornerRadius="4"
+                                                        Background="{Binding Converter={StaticResource MarkerTypeToBrush}}">
+                                                    <TextBlock Text="{Binding}" Foreground="White" FontWeight="SemiBold" FontSize="12"/>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
                                     <Button Style="{StaticResource SecondaryButton}" Content="+ Добавить"
                                             Command="{Binding AddManualMarkerCommand}"/>
                                 </StackPanel>
@@ -214,7 +223,12 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Style="{StaticResource Heading}" Text="История сессий"/>
+                    <DockPanel Grid.Row="0" Margin="0,0,0,0">
+                        <Button DockPanel.Dock="Right" Style="{StaticResource DangerButton}"
+                                Content="Очистить историю"
+                                Command="{Binding ClearHistoryCommand}" Padding="12,6"/>
+                        <TextBlock Style="{StaticResource Heading}" Text="История сессий" VerticalAlignment="Center"/>
+                    </DockPanel>
 
                     <Border Grid.Row="1" Style="{StaticResource Card}">
                         <ListView ItemsSource="{Binding SessionHistory}" BorderThickness="0" Background="Transparent">
@@ -248,8 +262,8 @@
 
             <!-- ==================== SETUP TAB (3) ==================== -->
             <TabItem Header="Настройки">
-                <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="32,24">
-                    <StackPanel MaxWidth="640" Margin="32,24">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="820" Margin="32,24">
                         <TextBlock Style="{StaticResource Heading}" Text="Настройки"/>
 
                         <!-- Tool status banner -->
@@ -302,16 +316,16 @@
                                                    Text="{Binding ObsStatus}" Style="{StaticResource BaseText}"/>
                                     </StackPanel>
                                 </Grid>
-                                <CheckBox Content="Автозапуск OBS при старте приложения"
-                                          IsChecked="{Binding AutoStartObs}"
-                                          Margin="0,12,0,8"/>
-                                <DockPanel>
+                                <TextBlock Style="{StaticResource Label}" Text="Путь к OBS Studio (obs64.exe)" Margin="0,12,0,4"/>
+                                <DockPanel Margin="0,0,0,8">
                                     <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
                                             Content="Обзор" Margin="8,0,0,0"
                                             Command="{Binding BrowseObsExeCommand}"/>
                                     <TextBox Text="{Binding ObsExePath, UpdateSourceTrigger=PropertyChanged}"
                                              IsReadOnly="True"/>
                                 </DockPanel>
+                                <CheckBox Content="Автозапуск OBS при старте приложения"
+                                          IsChecked="{Binding AutoStartObs}"/>
                             </StackPanel>
                         </Border>
 
@@ -388,7 +402,12 @@
                                          AcceptsReturn="True" Height="60" TextWrapping="Wrap"
                                          VerticalScrollBarVisibility="Auto"/>
                                 <TextBlock Style="{StaticResource Label}" Text="Или путь к файлу глоссария" Margin="0,8,0,4"/>
-                                <TextBox Text="{Binding GlossaryFilePath, UpdateSourceTrigger=PropertyChanged}"/>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                            Content="Обзор" Margin="8,0,0,0"
+                                            Command="{Binding BrowseGlossaryFileCommand}"/>
+                                    <TextBox Text="{Binding GlossaryFilePath, UpdateSourceTrigger=PropertyChanged}"/>
+                                </DockPanel>
                             </StackPanel>
                         </Border>
 
@@ -408,6 +427,21 @@
                                           Margin="0,0,0,8"/>
                                 <CheckBox Content="Сворачивать в трей"
                                           IsChecked="{Binding MinimizeToTray}"/>
+                            </StackPanel>
+                        </Border>
+
+                        <!-- History settings -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="История сессий"/>
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                    <TextBlock Style="{StaticResource Label}" Text="Макс. сессий в истории:"
+                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBox Text="{Binding MaxHistoryCount, UpdateSourceTrigger=PropertyChanged}"
+                                             Width="60"/>
+                                </StackPanel>
+                                <CheckBox Content="Удалять файлы при очистке истории"
+                                          IsChecked="{Binding DeleteFilesOnClear}"/>
                             </StackPanel>
                         </Border>
 

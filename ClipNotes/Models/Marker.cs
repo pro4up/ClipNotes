@@ -20,5 +20,5 @@ public partial class Marker : ObservableObject
     [ObservableProperty] private string? _textFilePath;
 
     [JsonIgnore]
-    public string TimestampFormatted => Timestamp.ToString(@"hh\:mm\:ss\.fff");
+    public string TimestampFormatted => Timestamp.ToString(@"hh\:mm\:ss");
 }

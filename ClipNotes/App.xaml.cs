@@ -1,4 +1,6 @@
+using System.Runtime.InteropServices;
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Media;
 using ClipNotes.Services;
 using ClipNotes.Views;
@@ -73,8 +75,39 @@ public partial class App : Application
             _trayIcon.Visible = false;
     }
 
-    private static System.Drawing.Icon LoadAppIcon()
+    [DllImport("dwmapi.dll")]
+    private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
+
+    private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
+    private const int DWMWA_CAPTION_COLOR = 35;
+
+    public static void ApplyTitleBarTheme(Window window, bool dark)
     {
+        try
+        {
+            var hwnd = new WindowInteropHelper(window).Handle;
+            if (hwnd == IntPtr.Zero) return;
+            int darkValue = dark ? 1 : 0;
+            DwmSetWindowAttribute(hwnd, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkValue, sizeof(int));
+            // Caption color (Windows 11 22000+ only)
+            if (Environment.OSVersion.Version.Build >= 22000)
+            {
+                int color = dark ? 0x001E1E1E : unchecked((int)0x00F7F7F2); // BGR
+                DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref color, sizeof(int));
+            }
+        }
+        catch { }
+    }
+
+    private static System.Drawing.Icon LoadTrayIcon()
+    {
+        try
+        {
+            var uri = new Uri("pack://application:,,,/Resources/tray.ico");
+            var stream = Application.GetResourceStream(uri)?.Stream;
+            if (stream != null) return new System.Drawing.Icon(stream);
+        }
+        catch { }
         try
         {
             var exeDir = System.IO.Path.GetDirectoryName(
@@ -91,7 +124,7 @@ public partial class App : Application
     {
         _trayIcon = new System.Windows.Forms.NotifyIcon
         {
-            Icon = LoadAppIcon(),
+            Icon = LoadTrayIcon(),
             Text = "ClipNotes",
             Visible = false
         };
@@ -113,6 +146,9 @@ public partial class App : Application
     {
         IsDark = dark;
         var r = Current.Resources;
+        // Apply title bar theme to all open windows
+        foreach (Window w in Current.Windows)
+            ApplyTitleBarTheme(w, dark);
 
         if (dark)
         {

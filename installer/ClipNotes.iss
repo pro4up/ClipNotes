@@ -50,15 +50,21 @@ Name: "russian";  MessagesFile: "compiler:Languages\Russian.isl"
 Name: "english";  MessagesFile: "compiler:Default.isl"
 
 [Tasks]
-Name: "desktopicon";  Description: "{cm:CreateDesktopIcon}";  GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
-Name: "startupicon";  Description: "Добавить в автозапуск Windows";  GroupDescription: "При запуске:"; Flags: unchecked
+Name: "desktopicon";      Description: "{cm:CreateDesktopIcon}";  GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
+Name: "startupicon";      Description: "Добавить в автозапуск Windows";  GroupDescription: "При запуске:"; Flags: unchecked
+Name: "whisper_cpu";      Description: "CPU (OpenBLAS) — работает на любом компьютере";  GroupDescription: "Движок транскрипции:"; Flags: exclusive
+Name: "whisper_cuda";     Description: "GPU CUDA — только NVIDIA (требует CUDA 12 Runtime)";  GroupDescription: "Движок транскрипции:"; Flags: exclusive unchecked
 
 [Files]
 ; Main executable
 Source: "{#AppDir}\{#MyAppExeName}";  DestDir: "{app}"; Flags: ignoreversion
 
-; Tools
-Source: "{#AppDir}\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs
+; Tools — CPU whisper (default)
+Source: "{#AppDir}\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs; Tasks: whisper_cpu
+; Tools — CUDA whisper (user choice)
+; NOTE: Build CUDA whisper first: .\tools\download-whisper.ps1 -Backend cuda
+; Then put it in app-cuda\tools\ and uncomment below:
+; Source: "{#InstallerDir}\..\app-cuda\tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion recursesubdirs; Tasks: whisper_cuda
 
 ; Models (large file — user may have downloaded separately)
 Source: "{#AppDir}\models\*"; DestDir: "{app}\models"; Flags: ignoreversion skipifsourcedoesntexist
