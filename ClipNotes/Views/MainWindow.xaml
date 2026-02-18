@@ -223,11 +223,12 @@
                         <RowDefinition Height="*"/>
                     </Grid.RowDefinitions>
 
-                    <DockPanel Grid.Row="0" Margin="0,0,0,0">
+                    <DockPanel Grid.Row="0" Margin="0,0,0,16">
                         <Button DockPanel.Dock="Right" Style="{StaticResource DangerButton}"
-                                Content="Очистить историю"
-                                Command="{Binding ClearHistoryCommand}" Padding="12,6"/>
-                        <TextBlock Style="{StaticResource Heading}" Text="История сессий" VerticalAlignment="Center"/>
+                                Content="Очистить историю" Height="34"
+                                Command="{Binding ClearHistoryCommand}"
+                                Padding="12,0" VerticalAlignment="Center"/>
+                        <TextBlock Style="{StaticResource Heading}" Text="История сессий"/>
                     </DockPanel>
 
                     <Border Grid.Row="1" Style="{StaticResource Card}">
@@ -388,9 +389,23 @@
                                     <StackPanel Grid.Column="0">
                                         <TextBlock Style="{StaticResource Label}" Text="Модель"/>
                                         <ComboBox ItemsSource="{Binding ModelOptions}"
-                                                  DisplayMemberPath="Display"
                                                   SelectedValuePath="Value"
-                                                  SelectedValue="{Binding WhisperModel}"/>
+                                                  SelectedValue="{Binding WhisperModel}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate>
+                                                    <Grid>
+                                                        <Grid.ColumnDefinitions>
+                                                            <ColumnDefinition Width="130"/>
+                                                            <ColumnDefinition Width="*"/>
+                                                        </Grid.ColumnDefinitions>
+                                                        <TextBlock Grid.Column="0" Text="{Binding ModelName}" FontWeight="Medium"/>
+                                                        <TextBlock Grid.Column="1" Text="{Binding VramHint}"
+                                                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                                                   Margin="4,0,0,0"/>
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
                                     </StackPanel>
                                     <StackPanel Grid.Column="2">
                                         <TextBlock Style="{StaticResource Label}" Text="Язык"/>

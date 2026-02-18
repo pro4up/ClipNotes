@@ -738,4 +738,6 @@ public partial class MainViewModel : ObservableObject
 public record ModelOption(string Value, string Display)
 {
     public override string ToString() => Display;
+    public string ModelName => Display.Contains(" — ") ? Display[..Display.IndexOf(" — ")] : Display;
+    public string VramHint  => Display.Contains(" — ") ? Display[(Display.IndexOf(" — ") + 3)..] : "";
 }
