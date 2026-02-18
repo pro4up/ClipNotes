@@ -1,0 +1,39 @@
+name: Build
+
+on:
+  push:
+    branches: [ master, main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master, main ]
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore dependencies
+      run: dotnet restore ClipNotes/ClipNotes.csproj
+
+    - name: Build
+      run: |
+        dotnet publish ClipNotes/ClipNotes.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained true `
+          -o ./app-ci `
+          --nologo
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ClipNotes-win-x64
+        path: app-ci/
+        retention-days: 7

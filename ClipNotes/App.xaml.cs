@@ -73,11 +73,25 @@ public partial class App : Application
             _trayIcon.Visible = false;
     }
 
+    private static System.Drawing.Icon LoadAppIcon()
+    {
+        try
+        {
+            var exeDir = System.IO.Path.GetDirectoryName(
+                System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName) ?? ".";
+            var icoPath = System.IO.Path.Combine(exeDir, "ClipNotes.exe");
+            if (System.IO.File.Exists(icoPath))
+                return System.Drawing.Icon.ExtractAssociatedIcon(icoPath) ?? System.Drawing.SystemIcons.Application;
+        }
+        catch { }
+        return System.Drawing.SystemIcons.Application;
+    }
+
     private void InitTrayIcon()
     {
         _trayIcon = new System.Windows.Forms.NotifyIcon
         {
-            Icon = System.Drawing.SystemIcons.Application,
+            Icon = LoadAppIcon(),
             Text = "ClipNotes",
             Visible = false
         };
@@ -125,26 +139,26 @@ public partial class App : Application
         }
         else
         {
-            r["BgBrush"]               = Brush(0xFA, 0xFA, 0xFA);
-            r["CardBrush"]             = Brush(0xFF, 0xFF, 0xFF);
+            r["BgBrush"]               = Brush(0xF2, 0xF2, 0xF7); // iOS gray6
+            r["CardBrush"]             = Brush(0xFA, 0xFA, 0xFC);
             r["AccentBrush"]           = Brush(0x00, 0x7A, 0xFF);
             r["DangerBrush"]           = Brush(0xFF, 0x3B, 0x30);
             r["SuccessBrush"]          = Brush(0x34, 0xC7, 0x59);
             r["TextPrimaryBrush"]      = Brush(0x1C, 0x1C, 0x1E);
             r["TextSecondaryBrush"]    = Brush(0x8E, 0x8E, 0x93);
-            r["BorderBrush"]           = Brush(0xE5, 0xE5, 0xEA);
-            r["SeparatorBrush"]        = Brush(0xF2, 0xF2, 0xF7);
+            r["BorderBrush"]           = Brush(0xD8, 0xD8, 0xDD);
+            r["SeparatorBrush"]        = Brush(0xE8, 0xE8, 0xED);
             r["InputBgBrush"]          = Brush(0xFF, 0xFF, 0xFF);
-            r["InfoBannerBgBrush"]     = Brush(0xF0, 0xF7, 0xFF);
-            r["InfoBannerBorderBrush"] = Brush(0xB0, 0xD4, 0xF0);
+            r["InfoBannerBgBrush"]     = Brush(0xE8, 0xF3, 0xFF);
+            r["InfoBannerBorderBrush"] = Brush(0xA0, 0xC8, 0xEA);
             r["InfoBannerFgBrush"]     = Brush(0x1A, 0x4A, 0x7A);
             // Marker buttons — vivid for light
             r["BugBrush"]              = Brush(0xEF, 0x44, 0x44);
             r["TaskBrush"]             = Brush(0x3B, 0x82, 0xF6);
             r["NoteBrush"]             = Brush(0x22, 0xC5, 0x5E);
             // Scrollbar
-            r["ScrollBarThumbBrush"]   = Brush(0xC7, 0xC7, 0xCC);
-            r["ScrollBarTrackBrush"]   = Brush(0xFA, 0xFA, 0xFA);
+            r["ScrollBarThumbBrush"]   = Brush(0xB0, 0xB0, 0xB8);
+            r["ScrollBarTrackBrush"]   = Brush(0xF2, 0xF2, 0xF7);
         }
     }
 

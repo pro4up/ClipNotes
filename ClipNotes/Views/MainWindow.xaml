@@ -4,6 +4,7 @@
         xmlns:vm="clr-namespace:ClipNotes.ViewModels"
         xmlns:models="clr-namespace:ClipNotes.Models"
         Title="ClipNotes" Height="780" Width="900"
+        Icon="/Resources/icon.ico"
         MinHeight="600" MinWidth="750"
         Background="{DynamicResource BgBrush}"
         WindowStartupLocation="CenterScreen"

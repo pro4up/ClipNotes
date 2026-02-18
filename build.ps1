@@ -4,7 +4,8 @@ param(
     [switch]$SkipDependencies,
     [switch]$SkipModel,
     [string]$Model = "large-v3-turbo",
-    [string]$Configuration = "Release"
+    [string]$Configuration = "Release",
+    [string]$Backend = "cpu"   # cpu | cuda  (whisper backend)
 )
 
 $ErrorActionPreference = "Stop"
@@ -32,7 +33,7 @@ if (-not $SkipDependencies) {
 
     Write-Host ""
     Write-Host "[2/6] Building/Downloading whisper-cli..." -ForegroundColor Yellow
-    & "$scriptDir\tools\download-whisper.ps1" -OutputDir $toolsOutputDir
+    & "$scriptDir\tools\download-whisper.ps1" -OutputDir $toolsOutputDir -Backend $Backend
 } else {
     Write-Host "[1-2/6] Skipping dependency downloads." -ForegroundColor DarkGray
 }

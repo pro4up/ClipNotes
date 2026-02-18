@@ -509,7 +509,7 @@ public partial class MainViewModel : ObservableObject
             Index = Markers.Count + 1,
             Type = ManualMarkerType,
             Timestamp = ts,
-            Timecode = ts.ToString(@"hh\:mm\:ss") + ".000"
+            Timecode = ts.ToString(@"hh\:mm\:ss")
         };
 
         Markers.Add(marker);
@@ -541,7 +541,9 @@ public partial class MainViewModel : ObservableObject
                 Index = Markers.Count + 1,
                 Type = type,
                 Timestamp = status.Value.duration,
-                Timecode = status.Value.timecode
+                Timecode = status.Value.timecode.Length > 8
+                    ? status.Value.timecode[..8]
+                    : status.Value.timecode
             };
 
             Application.Current?.Dispatcher.Invoke(() => Markers.Add(marker));
