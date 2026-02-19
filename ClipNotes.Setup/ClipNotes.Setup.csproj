@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWPF>true</UseWPF>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>ClipNotes.Setup</AssemblyName>
+    <RootNamespace>ClipNotes.Setup</RootNamespace>
+    <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Company>ClipNotes</Company>
+    <Product>ClipNotes Setup</Product>
+    <Description>ClipNotes Installer</Description>
+    <DefineConstants Condition="'$(DefineConstants)' == ''">$(DefineConstants)</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\icon.ico" />
+    <!-- app-bundle.zip включается только при OFFLINE_BUILD -->
+    <EmbeddedResource Include="Resources\app-bundle.zip" Condition="$(DefineConstants.Contains('OFFLINE_BUILD'))" />
+  </ItemGroup>
+
+</Project>

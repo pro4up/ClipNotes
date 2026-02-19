@@ -5,13 +5,18 @@ param(
     [switch]$SkipModel,
     [string]$Model = "large-v3-turbo",
     [string]$Configuration = "Release",
-    [string]$Backend = "cpu"   # cpu | cuda  (whisper backend)
+    [string]$Backend = "cpu",           # cpu | cuda  (whisper backend)
+    [switch]$BuildSetup,                # Собрать Online Setup (~10 MB)
+    [switch]$BuildOfflineSetup,         # Собрать Offline Setup (~450 MB, включает bundle)
+    [switch]$BuildPortable              # Собрать Portable ZIP (без models/)
 )
 
 $ErrorActionPreference = "Stop"
 $scriptDir = $PSScriptRoot
 $sourceDir = "$scriptDir\ClipNotes"
+$setupSourceDir = "$scriptDir\ClipNotes.Setup"
 $compileDir = "$scriptDir\..\app"
+$setupOutputDir = "$scriptDir\..\Setup"
 $toolsOutputDir = "$compileDir\tools"
 $modelsOutputDir = "$compileDir\models"
 $licensesDir = "$compileDir\licenses"
@@ -64,6 +69,20 @@ dotnet publish "$sourceDir\ClipNotes.csproj" `
     -o "$compileDir" `
     --nologo
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }
+
+Write-Host ""
+Write-Host "[5b/6] Publishing Uninstaller..." -ForegroundColor Yellow
+$uninstallerDir = "$scriptDir\ClipNotes.Uninstaller"
+if (Test-Path $uninstallerDir) {
+    dotnet publish "$uninstallerDir\ClipNotes.Uninstaller.csproj" `
+        -c $Configuration `
+        -r win-x64 --self-contained false `
+        -p:PublishSingleFile=true `
+        -o "$compileDir" --nologo
+    if ($LASTEXITCODE -ne 0) { throw "Uninstaller build failed" }
+} else {
+    Write-Host "  [skip] ClipNotes.Uninstaller project not found" -ForegroundColor DarkGray
+}
 
 # Step 6: Create licenses
 Write-Host ""
@@ -163,6 +182,168 @@ For full license text, see:
 FFmpeg source code: https://ffmpeg.org/download.html
 "@ | Out-File -FilePath "$licensesDir\FFmpeg-LICENSE.txt" -Encoding UTF8
 
+# ── Setup: Online ──────────────────────────────────────────────────────────────
+if ($BuildSetup) {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "  Building Online Setup..." -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+
+    if (-not (Test-Path $setupOutputDir)) { New-Item -ItemType Directory -Path $setupOutputDir -Force | Out-Null }
+
+    dotnet publish "$setupSourceDir\ClipNotes.Setup.csproj" `
+        -c Release -r win-x64 --self-contained false `
+        -p:PublishSingleFile=true `
+        -o "$setupOutputDir\Online" --nologo
+    if ($LASTEXITCODE -ne 0) { throw "Setup build failed" }
+
+    $onlineExe = "$setupOutputDir\Online\ClipNotes.Setup.exe"
+    $destExe   = "$setupOutputDir\ClipNotes-Setup.exe"
+    if (Test-Path $destExe) {
+        Get-Process "ClipNotes.Setup" -ErrorAction SilentlyContinue | Stop-Process -Force
+        Start-Sleep -Milliseconds 500
+        Remove-Item $destExe -Force
+    }
+    Move-Item $onlineExe $destExe
+    Remove-Item "$setupOutputDir\Online" -Recurse -Force -ErrorAction SilentlyContinue
+
+    Write-Host "[OK] ClipNotes-Setup.exe" -ForegroundColor Green
+}
+
+# ── Setup: Offline ─────────────────────────────────────────────────────────────
+if ($BuildOfflineSetup) {
+    Write-Host ""
+    Write-Host "========================================" -ForegroundColor Cyan
+    Write-Host "  Building Offline Setup..." -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Cyan
+
+    if (-not (Test-Path $setupOutputDir)) { New-Item -ItemType Directory -Path $setupOutputDir -Force | Out-Null }
+
+    # Создать bundle из app/  (без models/)
+    $bundleZip = "$setupSourceDir\Resources\app-bundle.zip"
+    Write-Host "  Creating app-bundle.zip..." -ForegroundColor Yellow
+
+    if (Test-Path $bundleZip) { Remove-Item $bundleZip }
+
+    $bundleItems = @(
+        "$compileDir\ClipNotes.exe",
+        "$compileDir\*.dll"
+    )
+
+    # Добавляем tools/ если есть
+    if (Test-Path "$compileDir\tools") {
+        $bundleItems += "$compileDir\tools"
+    }
+    if (Test-Path "$compileDir\licenses") {
+        $bundleItems += "$compileDir\licenses"
+    }
+
+    # Используем ZipFile через .NET напрямую
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::Open($bundleZip, 'Create')
+    try {
+        $addFile = {
+            param($srcPath, $entryName)
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $srcPath, $entryName, [System.IO.Compression.CompressionLevel]::Fastest) | Out-Null
+        }
+
+        # Добавляем exe и dll из корня app/
+        Get-ChildItem "$compileDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
+            & $addFile $_.FullName $_.Name
+        }
+        # Добавляем tools/
+        if (Test-Path "$compileDir\tools") {
+            Get-ChildItem "$compileDir\tools" -File | ForEach-Object {
+                & $addFile $_.FullName "tools\$($_.Name)"
+            }
+        }
+        # Добавляем licenses/
+        if (Test-Path "$compileDir\licenses") {
+            Get-ChildItem "$compileDir\licenses" -File | ForEach-Object {
+                & $addFile $_.FullName "licenses\$($_.Name)"
+            }
+        }
+    } finally {
+        $zip.Dispose()
+    }
+
+    $bundleSize = [math]::Round((Get-Item $bundleZip).Length / 1MB, 1)
+    Write-Host "  app-bundle.zip: $bundleSize MB" -ForegroundColor Yellow
+
+    dotnet publish "$setupSourceDir\ClipNotes.Setup.csproj" `
+        -c Release -r win-x64 --self-contained true `
+        -p:PublishSingleFile=true `
+        -p:DefineConstants="OFFLINE_BUILD" `
+        -o "$setupOutputDir\Offline" --nologo
+    if ($LASTEXITCODE -ne 0) { throw "Offline setup build failed" }
+
+    $offlineExe = "$setupOutputDir\Offline\ClipNotes.Setup.exe"
+    $destExe    = "$setupOutputDir\ClipNotes-Setup-Offline.exe"
+    if (Test-Path $destExe) { Remove-Item $destExe }
+    Move-Item $offlineExe $destExe
+    Remove-Item "$setupOutputDir\Offline" -Recurse -Force -ErrorAction SilentlyContinue
+
+    # Удаляем временный bundle
+    Remove-Item $bundleZip -ErrorAction SilentlyContinue
+
+    Write-Host "[OK] ClipNotes-Setup-Offline.exe" -ForegroundColor Green
+}
+
+# ── Portable ZIP ───────────────────────────────────────────────────────────────
+if ($BuildPortable) {
+    Write-Host ""
+    Write-Host "  Creating Portable ZIP..." -ForegroundColor Yellow
+
+    if (-not (Test-Path $setupOutputDir)) { New-Item -ItemType Directory -Path $setupOutputDir -Force | Out-Null }
+
+    $portableZip = "$setupOutputDir\ClipNotes-portable.zip"
+    if (Test-Path $portableZip) { Remove-Item $portableZip }
+
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::Open($portableZip, 'Create')
+    try {
+        $addFile = {
+            param($srcPath, $entryName)
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $srcPath, $entryName, [System.IO.Compression.CompressionLevel]::Fastest) | Out-Null
+        }
+
+        # Корень (exe, dll, json) — без models/
+        Get-ChildItem "$compileDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
+            & $addFile $_.FullName "ClipNotes\$($_.Name)"
+        }
+        if (Test-Path "$compileDir\tools") {
+            Get-ChildItem "$compileDir\tools" -File | ForEach-Object {
+                & $addFile $_.FullName "ClipNotes\tools\$($_.Name)"
+            }
+        }
+        if (Test-Path "$compileDir\licenses") {
+            Get-ChildItem "$compileDir\licenses" -File | ForEach-Object {
+                & $addFile $_.FullName "ClipNotes\licenses\$($_.Name)"
+            }
+        }
+    } finally {
+        $zip.Dispose()
+    }
+
+    $portableSize = [math]::Round((Get-Item $portableZip).Length / 1MB, 1)
+    Write-Host "[OK] ClipNotes-portable.zip ($portableSize MB)" -ForegroundColor Green
+}
+
+# ── SHA256 ─────────────────────────────────────────────────────────────────────
+if (($BuildSetup -or $BuildOfflineSetup -or $BuildPortable) -and (Test-Path $setupOutputDir)) {
+    $shaFile = "$setupOutputDir\SHA256SUMS.txt"
+    if (Test-Path $shaFile) { Remove-Item $shaFile }
+    Get-ChildItem $setupOutputDir -File -Filter "*.exe" | ForEach-Object {
+        $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+        "$hash  $($_.Name)" | Add-Content $shaFile
+    }
+    Get-ChildItem $setupOutputDir -File -Filter "*.zip" | ForEach-Object {
+        $hash = (Get-FileHash $_.FullName -Algorithm SHA256).Hash
+        "$hash  $($_.Name)" | Add-Content $shaFile
+    }
+    if (Test-Path $shaFile) { Write-Host "[OK] SHA256SUMS.txt" -ForegroundColor Green }
+}
+
 Write-Host ""
 Write-Host "========================================" -ForegroundColor Green
 Write-Host "  Build Complete!" -ForegroundColor Green
@@ -182,6 +363,9 @@ else { Write-Host "  [!!] tools\ffprobe.exe MISSING" -ForegroundColor Red }
 
 if (Test-Path "$toolsOutputDir\whisper-cli.exe") { Write-Host "  [OK] tools\whisper-cli.exe" -ForegroundColor Green }
 else { Write-Host "  [!!] tools\whisper-cli.exe MISSING" -ForegroundColor Red }
+
+if (Test-Path "$compileDir\ClipNotes.Uninstaller.exe") { Write-Host "  [OK] ClipNotes.Uninstaller.exe" -ForegroundColor Green }
+else { Write-Host "  [!!] ClipNotes.Uninstaller.exe MISSING" -ForegroundColor Yellow }
 
 $modelFile = Get-ChildItem -Path $modelsOutputDir -Filter "ggml-*.bin" -ErrorAction SilentlyContinue | Select-Object -First 1
 if ($modelFile) { Write-Host "  [OK] models\$($modelFile.Name)" -ForegroundColor Green }

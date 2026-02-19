@@ -1,0 +1,84 @@
+<UserControl x:Class="ClipNotes.Setup.Pages.OptionsPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Grid Margin="32,20,32,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>  <!-- Заголовок -->
+            <RowDefinition Height="20"/>    <!-- Отступ -->
+            <RowDefinition Height="Auto"/>  <!-- Путь -->
+            <RowDefinition Height="12"/>    <!-- Отступ -->
+            <RowDefinition Height="Auto"/>  <!-- Доп. параметры -->
+            <RowDefinition Height="*"/>     <!-- Распорка -->
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <StackPanel Grid.Row="0">
+            <TextBlock Text="Параметры установки"
+                       FontSize="20" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock Text="Выберите папку и дополнительные параметры"
+                       FontSize="13"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- Карточка: путь установки -->
+        <Border Grid.Row="2"
+                Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource CardBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="16,12">
+            <StackPanel>
+                <TextBlock Text="Папка установки"
+                           FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Margin="0,0,0,8"/>
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="8"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBox x:Name="PathBox"
+                             Grid.Column="0"
+                             TextChanged="PathBox_TextChanged"/>
+                    <Button Grid.Column="2"
+                            Content="Обзор"
+                            Style="{StaticResource BrowseButtonStyle}"
+                            Click="BrowseButton_Click"/>
+                </Grid>
+                <TextBlock x:Name="SpaceText"
+                           Margin="0,8,0,0"
+                           FontSize="11"
+                           Foreground="{DynamicResource TextSecondaryBrush}"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Карточка: дополнительные параметры -->
+        <Border Grid.Row="4"
+                Background="{DynamicResource CardBrush}"
+                BorderBrush="{DynamicResource CardBorderBrush}"
+                BorderThickness="1"
+                CornerRadius="12"
+                Padding="16,12">
+            <StackPanel>
+                <TextBlock Text="Дополнительно"
+                           FontSize="11" FontWeight="SemiBold"
+                           Foreground="{DynamicResource TextSecondaryBrush}"
+                           Margin="0,0,0,10"/>
+                <CheckBox x:Name="DesktopShortcutCheck"
+                          Content="Создать ярлык на рабочем столе"
+                          IsChecked="True"
+                          Checked="DesktopShortcutCheck_Changed"
+                          Unchecked="DesktopShortcutCheck_Changed"/>
+                <CheckBox x:Name="StartupCheck"
+                          Content="Запускать с Windows (в трее)"
+                          Margin="0,10,0,0"
+                          Checked="StartupCheck_Changed"
+                          Unchecked="StartupCheck_Changed"/>
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

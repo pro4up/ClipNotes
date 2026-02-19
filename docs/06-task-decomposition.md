@@ -26,8 +26,8 @@
 
 ```
 1. Прочитать AppSettings.cs — найти список поддерживаемых моделей
-2. Добавить новое значение в enum/список моделей
-3. Прочитать SettingsWindow.xaml — найти ComboBox выбора модели
+2. Добавить новое значение в список моделей (ModelOptions в MainViewModel.cs)
+3. Прочитать MainWindow.xaml — найти ComboBox выбора модели
 4. Убедиться что новая модель появилась в UI (или добавить)
 5. Проверить PathHelper.cs — формат имени файла модели корректен
 6. Проверить: dotnet build
@@ -39,7 +39,7 @@
 
 ```
 1. Воспроизвести баг — зафиксировать точные шаги
-2. Прочитать AudioProcessingService.cs
+2. Прочитать FFmpegService.cs или WhisperService.cs (или PipelineService.cs)
 3. Найти место ошибки (exit code, stdout, stderr)
 4. Воспроизвести вручную в PowerShell (ffmpeg/whisper команду)
 5. Исправить в коде
@@ -53,8 +53,8 @@
 ```
 1. Прочитать AppSettings.cs — добавить свойство
 2. Прочитать SettingsService.cs — убедиться что JSON сериализация подхватит
-3. Прочитать SettingsWindow.xaml + .cs — добавить UI-элемент и биндинг
-4. Прочитать MainViewModel.cs — использовать новое поле
+3. Прочитать MainWindow.xaml — найти вкладку Настройки, добавить UI-элемент
+4. Прочитать MainViewModel.cs — добавить ObservableProperty и биндинг
 5. dotnet build
 6. Тест: изменить настройку, сохранить, перезапустить, проверить что сохранилось
 ```
@@ -78,10 +78,10 @@
 1. Уточнить требования если неясно
 2. Найти точку входа — какой файл нужно менять (Model? Service? ViewModel? View?)
 3. Декомпозировать по слоям MVVM снизу вверх:
-   a. Model — данные
-   b. Service — логика
-   c. ViewModel — команды и свойства
-   d. View (XAML) — UI
+   a. Model — данные (AppSettings.cs, Marker.cs, SessionData.cs)
+   b. Service — логика (Services/*.cs)
+   c. ViewModel — команды и свойства (MainViewModel.cs)
+   d. View (XAML) — UI (MainWindow.xaml)
 4. Реализовывать по одному слою за подзадачу
 5. После каждого слоя — dotnet build
 6. Финальный тест — полный сценарий использования фичи
@@ -101,7 +101,7 @@
 ```
 1. Добавить System.Diagnostics.Debug.WriteLine в подозрительные места
 2. Запустить приложение, воспроизвести баг
-3. Посмотреть Output в VS или добавить логирование в файл
+3. Посмотреть Output в VS или проверить app\Logs\YYYY-MM-DD.log
 4. Сузить до конкретного метода
 5. Проверить аргументы/возвращаемые значения
 6. Исправить

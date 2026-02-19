@@ -29,8 +29,11 @@ Thumbs.db
 # Downloaded tools cache (kept in compile/, not source/)
 tools/.cache/
 
-# Installer output
-installer/Output/
+# Setup output directory
+../Setup/
+
+# Offline bundle (генерируется при сборке, не хранить в репозитории)
+ClipNotes.Setup/Resources/app-bundle.zip
 
 # App-ci (GitHub Actions artifact)
 app-ci/

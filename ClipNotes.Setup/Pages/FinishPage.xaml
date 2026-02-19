@@ -1,0 +1,46 @@
+<UserControl x:Class="ClipNotes.Setup.Pages.FinishPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Grid>
+        <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center"
+                    Margin="48,0">
+            <!-- Иконка успеха -->
+            <Border Width="68" Height="68"
+                    Background="#1A8A3A"
+                    CornerRadius="34"
+                    HorizontalAlignment="Center"
+                    Margin="0,0,0,18">
+                <TextBlock Text="✓"
+                           FontSize="32" FontWeight="Bold"
+                           Foreground="White"
+                           HorizontalAlignment="Center"
+                           VerticalAlignment="Center"/>
+            </Border>
+
+            <!-- Сообщение -->
+            <TextBlock Text="ClipNotes успешно установлен"
+                       FontSize="20" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"
+                       HorizontalAlignment="Center"/>
+
+            <TextBlock x:Name="PathText"
+                       FontSize="12"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       HorizontalAlignment="Center"
+                       Margin="0,6,0,0"/>
+
+            <!-- Разделитель -->
+            <Rectangle Height="0.5" Margin="0,22,0,22"
+                       Fill="{DynamicResource SeparatorBrush}"/>
+
+            <!-- Запустить -->
+            <CheckBox x:Name="LaunchCheck"
+                      Content="Запустить ClipNotes"
+                      IsChecked="True"
+                      HorizontalAlignment="Center"
+                      Checked="LaunchCheck_Changed"
+                      Unchecked="LaunchCheck_Changed"/>
+        </StackPanel>
+    </Grid>
+</UserControl>

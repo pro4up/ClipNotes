@@ -18,6 +18,9 @@
 # С конкретной моделью
 .\build.ps1 -Model "base"
 
+# С CUDA-бэкендом для whisper
+.\build.ps1 -Backend cuda
+
 # Только компиляция (всё уже скачано)
 .\build.ps1 -SkipDependencies -SkipModel
 ```
@@ -44,12 +47,18 @@
 
 ### `tools\download-whisper.ps1`
 ```powershell
-.\tools\download-whisper.ps1
+.\tools\download-whisper.ps1              # CPU (OpenBLAS, работает везде)
+.\tools\download-whisper.ps1 -Backend cuda  # NVIDIA CUDA 12
 ```
-1. Клонирует `whisper.cpp v1.7.4` в `tools\.cache\whisper.cpp`
+1. Клонирует `whisper.cpp v1.8.3` в `tools\.cache\whisper.cpp`
 2. Собирает через CMake + VS2022 (или Ninja fallback)
 3. Если сборка не удалась — скачивает prebuilt из GitHub Releases
 4. Копирует `whisper-cli.exe` (+ DLL) в `app\tools\`
+
+Бэкенды:
+- `cpu` (по умолчанию) — OpenBLAS, работает на любом железе
+- `cuda` — NVIDIA CUDA 12, требует CUDA Runtime
+- Vulkan (AMD/Intel) — только через сборку из исходников с `-DGGML_VULKAN=ON`
 
 **Требования:** Git, CMake, Visual Studio 2022 (или MSVC Build Tools)
 
@@ -84,7 +93,7 @@ E:\Claude Workstation\Projects\ClipNotes\app\ClipNotes.exe
 ```
 
 **При первом запуске:**
-1. Открыть Settings
+1. Открыть вкладку Настройки
 2. Указать OBS Host: `172.28.64.1:4455`
 3. Указать OutputDirectory: `E:\Claude Workstation\Projects\ClipNotes\sessions\`
 4. Выбрать модель (для теста: `base`)
@@ -98,7 +107,7 @@ app\
 ├── tools\
 │   ├── ffmpeg.exe
 │   ├── ffprobe.exe
-│   └── whisper-cli.exe
+│   └── whisper-cli.exe   ← + DLL (whisper.dll, ggml.dll, ggml-cpu.dll и др.)
 ├── models\
 │   └── ggml-{model}.bin
 └── licenses\
@@ -118,11 +127,18 @@ Test-Path 'E:\Claude Workstation\Projects\ClipNotes\app\tools\whisper-cli.exe'
 Get-ChildItem 'E:\Claude Workstation\Projects\ClipNotes\app\models\ggml-*.bin'
 ```
 
+## Создание установщика
+
+В папке `installer\` находится `ClipNotes.iss` для Inno Setup:
+- Выбор Whisper backend: CPU или CUDA
+- Опция "Добавить в автозапуск Windows"
+- Опция "Ярлык на рабочем столе"
+
 ## Проблемы при сборке
 
 | Проблема | Решение |
 |----------|---------|
 | `whisper-cli.exe` не собрался | Установить VS2022 Build Tools + CMake |
-| Модель неполная (756MB вместо 1549MB) | Удалить файл, запустить download-model.ps1 снова |
+| Модель неполная | Удалить файл, запустить download-model.ps1 снова |
 | `dotnet publish` не найден | Установить .NET 8 SDK |
 | Permission denied в WSL при mv | Использовать `cp -r` + `rm -rf` вместо `mv` |

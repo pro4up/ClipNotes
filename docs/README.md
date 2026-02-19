@@ -27,7 +27,8 @@
 ## Критические правила
 
 - Все относительные пути в PS-скриптах строятся от `$PSScriptRoot`
-- В C# все пути через `PathHelper.cs` (Assembly.Location)
+- В C# пути к инструментам через `PathHelper.cs` (Assembly.Location)
+- В `LogService.cs` путь через `Process.GetCurrentProcess().MainModule?.FileName` (не Assembly.Location)
 - Никогда не хардкодить абсолютные пути
 - Коммитить только по запросу пользователя
 - Отвечать на русском языке
