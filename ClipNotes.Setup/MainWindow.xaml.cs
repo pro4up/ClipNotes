@@ -22,20 +22,11 @@ public partial class MainWindow : Window
     private bool _isInstalling = false;
     private readonly bool _autoStartInstall;
 
-    private readonly List<(string Name, bool ShowInIndicator)> _pageNames =
-    [
-        ("Добро пожаловать", false),
-        ("Параметры",        true),
-        ("Обработчик",       true),
-        ("Модель",           true),
-        ("Установка",        true),
-        ("Готово",           false),
-    ];
-
     public MainWindow(InstallOptions? options = null, bool autoStartInstall = false)
     {
         if (options != null) _options = options;
         _autoStartInstall = autoStartInstall;
+        Loc.Load(_options.Language);
         InitializeComponent();
         BuildPages();
         BuildStepIndicator();
@@ -43,16 +34,50 @@ public partial class MainWindow : Window
         if (autoStartInstall) Loaded += OnAutoStartInstall;
     }
 
+    // ── Language ─────────────────────────────────────────────────────────────
+
+    public void ApplyLanguage(string lang)
+    {
+        _options.Language = lang;
+        Loc.Load(lang);
+
+        // Rebuild pages 1–6 (preserve page 0 / WelcomePage)
+        for (int i = 1; i < _pages.Count; i++)
+            _pages[i] = CreatePage(i);
+
+        if (_currentPage >= 1)
+            PageContent.Content = _pages[_currentPage];
+
+        if (_pages[0] is WelcomePage wp)
+            wp.ApplyLocalization();
+
+        UpdateNavigation();
+    }
+
+    private UserControl CreatePage(int index) => index switch
+    {
+        0 => new WelcomePage(_options, ApplyLanguage),
+        1 => new OptionsPage(_options),
+        2 => new BackendPage(_options),
+        3 => new ModelPage(_options),
+        4 => new SummaryPage(_options),
+        5 => new ProgressPage(_options),
+        6 => new FinishPage(_options),
+        _ => throw new ArgumentOutOfRangeException(nameof(index))
+    };
+
+    // ── Pages ─────────────────────────────────────────────────────────────────
+
     private async void OnAutoStartInstall(object sender, RoutedEventArgs e)
     {
         Loaded -= OnAutoStartInstall;
-        NavigateTo(4, animate: false);
+        NavigateTo(5, animate: false);
         _isInstalling = true;
         bool success = false;
-        if (_pages[4] is ProgressPage pp)
+        if (_pages[5] is ProgressPage pp)
             success = await pp.StartInstallAsync();
         _isInstalling = false;
-        if (success) NavigateTo(5);
+        if (success) NavigateTo(6);
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -63,25 +88,22 @@ public partial class MainWindow : Window
 
     private void BuildPages()
     {
-        _pages.Add(new WelcomePage(_options));
-        _pages.Add(new OptionsPage(_options));
-        _pages.Add(new BackendPage(_options));
-        _pages.Add(new ModelPage(_options));
-        _pages.Add(new ProgressPage(_options));
-        _pages.Add(new FinishPage(_options));
+        _pages.Clear();
+        for (int i = 0; i <= 6; i++)
+            _pages.Add(CreatePage(i));
     }
 
     private void BuildStepIndicator()
     {
+        // Pages 1–5 show in step indicator
         StepIndicator.Children.Clear();
-        for (int i = 0; i < _pageNames.Count; i++)
+        for (int i = 1; i <= 5; i++)
         {
-            if (!_pageNames[i].ShowInIndicator) continue;
             var ellipse = new Ellipse
             {
-                Width = 7, Height = 7,
+                Width  = 7, Height = 7,
                 Margin = new Thickness(4, 0, 4, 0),
-                Tag = i,
+                Tag    = i,
             };
             StepIndicator.Children.Add(ellipse);
         }
@@ -132,16 +154,17 @@ public partial class MainWindow : Window
     private void UpdateNavigation()
     {
         bool isWelcome  = _currentPage == 0;
-        bool isProgress = _currentPage == 4;
-        bool isFinish   = _currentPage == 5;
+        bool isProgress = _currentPage == 5;
+        bool isFinish   = _currentPage == 6;
 
         BackButton.Visibility = (isWelcome || isProgress || isFinish)
             ? Visibility.Hidden : Visibility.Visible;
         NextButton.Visibility = isProgress ? Visibility.Hidden : Visibility.Visible;
 
-        NextButton.Content = (_currentPage == 0 || _currentPage == 3) ? "Установить"
-                           : isFinish                                  ? "Готово"
-                                                                       : "Далее";
+        BackButton.Content = Loc.T("inst_Back");
+        NextButton.Content = (_currentPage == 0 || _currentPage == 4) ? Loc.T("inst_Install")
+                           : isFinish                                  ? Loc.T("inst_Finish")
+                                                                       : Loc.T("inst_Next");
 
         StepIndicator.Visibility = (isWelcome || isFinish) ? Visibility.Hidden : Visibility.Visible;
     }
@@ -154,9 +177,9 @@ public partial class MainWindow : Window
 
     private async void NextButton_Click(object sender, RoutedEventArgs e)
     {
-        if (_currentPage == 5)
+        if (_currentPage == 6)
         {
-            if (_pages[5] is FinishPage fp && fp.ShouldLaunch)
+            if (_pages[6] is FinishPage fp && fp.ShouldLaunch)
             {
                 var exePath = System.IO.Path.Combine(_options.InstallPath, "ClipNotes.exe");
                 if (System.IO.File.Exists(exePath))
@@ -166,9 +189,8 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_currentPage == 3)
+        if (_currentPage == 4)
         {
-            // Проверяем, нужны ли права Admin для выбранного пути
             if (NeedsAdminForPath(_options.InstallPath) && !IsAdmin())
             {
                 var dlg = new UacConfirmDialog(_options.InstallPath) { Owner = this };
@@ -177,26 +199,27 @@ public partial class MainWindow : Window
                 return;
             }
 
-            NavigateTo(4);
+            NavigateTo(5);
             _isInstalling = true;
             bool success = false;
-            if (_pages[4] is ProgressPage pp)
+            if (_pages[5] is ProgressPage pp)
                 success = await pp.StartInstallAsync();
             _isInstalling = false;
-            if (success)
-                NavigateTo(5);
+            if (success) NavigateTo(6);
             return;
         }
+
+        if (_currentPage == 3 && _pages[4] is SummaryPage sp)
+            sp.Refresh(_options);
 
         NavigateTo(_currentPage + 1);
     }
 
-    /// <summary>Вызывается ProgressPage при ошибке — возвращает кнопку «Назад».</summary>
     public void UnlockAfterError()
     {
         _isInstalling = false;
         BackButton.Visibility = Visibility.Visible;
-        BackButton.Content    = "Назад";
+        BackButton.Content    = Loc.T("inst_Back");
         NextButton.Visibility = Visibility.Hidden;
     }
 
@@ -210,7 +233,6 @@ public partial class MainWindow : Window
 
     private static bool NeedsAdminForPath(string path)
     {
-        // Пути внутри профиля пользователя — права не нужны
         foreach (var folder in new[]
         {
             Environment.SpecialFolder.LocalApplicationData,
@@ -226,7 +248,6 @@ public partial class MainWindow : Window
                 return false;
         }
 
-        // Системные папки — права нужны
         foreach (var folder in new[]
         {
             Environment.SpecialFolder.ProgramFiles,
@@ -242,11 +263,9 @@ public partial class MainWindow : Window
                 return true;
         }
 
-        // Для всего остального — проверяем реально, можем ли создать папку
         try
         {
             var testDir = path;
-            // Идём вверх по дереву, пока не найдём существующий родитель
             while (!string.IsNullOrEmpty(testDir) && !Directory.Exists(testDir))
                 testDir = System.IO.Path.GetDirectoryName(testDir) ?? "";
 
@@ -255,12 +274,12 @@ public partial class MainWindow : Window
                 var testFile = System.IO.Path.Combine(testDir, $"._clipnotes_probe_{Guid.NewGuid():N}");
                 File.WriteAllText(testFile, "");
                 File.Delete(testFile);
-                return false; // Записать можно — права не нужны
+                return false;
             }
         }
         catch { }
 
-        return true; // Не удалось записать — скорее всего нужны права
+        return true;
     }
 
     private void RestartAsAdmin()
@@ -285,7 +304,7 @@ public partial class MainWindow : Window
         {
             File.Delete(tempFile);
             MessageBox.Show(
-                $"Не удалось получить права администратора:\n{ex.Message}",
+                $"{Loc.T("inst_UacError")}\n{ex.Message}",
                 "ClipNotes Setup",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -297,7 +316,7 @@ public partial class MainWindow : Window
         if (_isInstalling)
         {
             var result = MessageBox.Show(
-                "Установка ещё не завершена. Прервать?",
+                Loc.T("inst_AbortConfirm"),
                 "ClipNotes Setup",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Warning);

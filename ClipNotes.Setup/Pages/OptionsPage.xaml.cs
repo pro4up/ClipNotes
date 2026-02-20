@@ -13,10 +13,19 @@ public partial class OptionsPage : UserControl
     {
         _options = options;
         InitializeComponent();
+
+        PageTitle.Text           = Loc.T("inst_OptionsTitle");
+        PageSubtitle.Text        = Loc.T("inst_OptionsSubtitle");
+        InstallFolderLabel.Text  = Loc.T("inst_InstallFolder");
+        BrowseButton.Content     = Loc.T("inst_Browse");
+        AdditionalLabel.Text     = Loc.T("inst_Additional");
+        DesktopShortcutCheck.Content = Loc.T("inst_DesktopShortcut");
+        StartupCheck.Content     = Loc.T("inst_RunOnStartup");
+        SpaceText.Text           = Loc.T("inst_SpaceHint");
+
         PathBox.Text = _options.InstallPath;
         DesktopShortcutCheck.IsChecked = _options.CreateDesktopShortcut;
         StartupCheck.IsChecked = _options.RunOnStartup;
-        UpdateSpaceText();
     }
 
     private void BrowseButton_Click(object sender, RoutedEventArgs e)
@@ -29,13 +38,6 @@ public partial class OptionsPage : UserControl
     private void PathBox_TextChanged(object sender, TextChangedEventArgs e)
     {
         _options.InstallPath = PathBox.Text;
-        UpdateSpaceText();
-    }
-
-    private void UpdateSpaceText()
-    {
-        // Базовый размер приложения без модели (офлайн ~450 MB, онлайн определяется моделью)
-        SpaceText.Text = "Потребуется минимум ~300 МБ свободного места";
     }
 
     private void DesktopShortcutCheck_Changed(object sender, RoutedEventArgs e)

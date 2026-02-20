@@ -12,4 +12,10 @@ public class SessionData
     public List<Marker> Markers { get; set; } = new();
     public AppSettings SettingsSnapshot { get; set; } = new();
     public string? ObsOutputPath { get; set; }
+
+    // Effective output directories (resolved at session creation time)
+    public string EffectiveVideoDir { get; set; } = "";
+    public string EffectiveAudioDir { get; set; } = "";
+    public string EffectiveTxtDir { get; set; } = "";
+    public string EffectiveTableDir { get; set; } = "";
 }

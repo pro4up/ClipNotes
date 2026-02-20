@@ -1,0 +1,15 @@
+{
+  "uninst_WindowTitle":    "ClipNotes — Uninstall",
+  "uninst_Title":          "Uninstall ClipNotes",
+  "uninst_InfoText":       "All application files will be removed from:\n{0}\n\nThe desktop shortcut, startup entry, and Programs list entry will also be removed.",
+  "uninst_InfoNoPath":     "Could not determine the installation path.\nSpecify the folder manually or close and delete the files yourself.",
+  "uninst_DeleteUserData": "Delete user settings and data (%AppData%\\ClipNotes)",
+  "uninst_Cancel":         "Cancel",
+  "uninst_Uninstall":      "Uninstall",
+  "uninst_Close":          "Close",
+  "uninst_Success":        "Uninstall complete",
+  "uninst_Error":          "Uninstall error",
+  "uninst_NoPath":         "Installation path not found.",
+  "uninst_Done":           "ClipNotes removed from\n{0}",
+  "uninst_Failed":         "Error during uninstall:\n{0}"
+}

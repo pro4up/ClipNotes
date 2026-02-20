@@ -4,5 +4,6 @@ public enum MarkerType
 {
     Bug,
     Task,
-    Note
+    Note,
+    Summary
 }

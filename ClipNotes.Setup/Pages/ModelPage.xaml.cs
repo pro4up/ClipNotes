@@ -13,6 +13,10 @@ public partial class ModelPage : UserControl
     {
         _options = options;
         InitializeComponent();
+
+        PageTitle.Text    = Loc.T("inst_ModelTitle");
+        PageSubtitle.Text = Loc.T("inst_ModelSubtitle");
+
         BuildModelList();
         UpdateNote();
     }
@@ -24,17 +28,15 @@ public partial class ModelPage : UserControl
         {
             var radio = new RadioButton
             {
-                Style    = (Style)FindResource("ModelRadioStyle"),
+                Style     = (Style)FindResource("ModelRadioStyle"),
                 IsChecked = model.Id == _options.Model,
-                Tag      = model.Id,
+                Tag       = model.Id,
             };
 
-            // Grid: левая часть | правая часть
             var grid = new Grid();
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(1, GridUnitType.Star) });
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
 
-            // Левая: название + рекомендуется + точность
             var left = new StackPanel();
 
             var nameRow = new StackPanel { Orientation = Orientation.Horizontal };
@@ -49,13 +51,13 @@ public partial class ModelPage : UserControl
             {
                 nameRow.Children.Add(new Border
                 {
-                    Margin      = new Thickness(8, 0, 0, 0),
-                    Background  = (Brush)FindResource("AccentBrush"),
+                    Margin       = new Thickness(8, 0, 0, 0),
+                    Background   = (Brush)FindResource("AccentBrush"),
                     CornerRadius = new CornerRadius(4),
-                    Padding     = new Thickness(6, 1, 6, 1),
-                    Child       = new TextBlock
+                    Padding      = new Thickness(6, 1, 6, 1),
+                    Child        = new TextBlock
                     {
-                        Text       = "Рекомендуется",
+                        Text       = Loc.T("inst_Recommended"),
                         FontSize   = 10,
                         FontWeight = FontWeights.SemiBold,
                         Foreground = Brushes.White,
@@ -65,13 +67,12 @@ public partial class ModelPage : UserControl
             left.Children.Add(nameRow);
             left.Children.Add(new TextBlock
             {
-                Text       = $"Точность: {model.Accuracy}",
+                Text       = $"{Loc.T("inst_Accuracy")} {Loc.T(model.AccuracyKey)}",
                 FontSize   = 11,
                 Foreground = (Brush)FindResource("TextSecondaryBrush"),
                 Margin     = new Thickness(0, 2, 0, 0),
             });
 
-            // Правая: размер + VRAM
             var right = new StackPanel { HorizontalAlignment = HorizontalAlignment.Right };
             right.Children.Add(new TextBlock
             {
@@ -109,6 +110,6 @@ public partial class ModelPage : UserControl
     {
         var model = ModelInfo.All.FirstOrDefault(m => m.Id == _options.Model);
         if (model != null)
-            NoteText.Text = $"Модель {model.DisplayName} занимает {model.SizeMB} на диске и скачивается при установке.";
+            NoteText.Text = Loc.T("inst_ModelNote", model.DisplayName, model.SizeMB);
     }
 }

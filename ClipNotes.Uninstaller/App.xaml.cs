@@ -1,4 +1,6 @@
+using System.IO;
 using System.Runtime.InteropServices;
+using System.Text.Json.Nodes;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Media;
@@ -14,12 +16,35 @@ public partial class App : Application
     {
         base.OnStartup(e);
 
+        Loc.Load(DetectLanguage());
+
         IsDarkTheme = DetectDarkTheme();
         if (IsDarkTheme) ApplyDarkTheme();
 
         var window = new MainWindow();
         MainWindow = window;
         window.Show();
+    }
+
+    private static string DetectLanguage()
+    {
+        try
+        {
+            var settingsPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ClipNotes", "settings.json");
+            if (File.Exists(settingsPath))
+            {
+                var node = JsonNode.Parse(File.ReadAllText(settingsPath));
+                if (node is JsonObject obj)
+                {
+                    var lang = obj["Language"]?.GetValue<string>();
+                    if (lang == "en" || lang == "ru") return lang;
+                }
+            }
+        }
+        catch { }
+        return "ru";
     }
 
     private static bool DetectDarkTheme()

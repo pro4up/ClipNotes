@@ -169,6 +169,7 @@ public partial class App : Application
             r["BugBrush"]              = Brush(0xB9, 0x1C, 0x1C);
             r["TaskBrush"]             = Brush(0x1D, 0x4E, 0xD8);
             r["NoteBrush"]             = Brush(0x15, 0x80, 0x3D);
+            r["SummaryBrush"]          = Brush(0x7E, 0x22, 0xCE);
             // Scrollbar
             r["ScrollBarThumbBrush"]   = Brush(0x48, 0x48, 0x4A);
             r["ScrollBarTrackBrush"]   = Brush(0x2C, 0x2C, 0x2E);
@@ -192,6 +193,7 @@ public partial class App : Application
             r["BugBrush"]              = Brush(0xEF, 0x44, 0x44);
             r["TaskBrush"]             = Brush(0x3B, 0x82, 0xF6);
             r["NoteBrush"]             = Brush(0x22, 0xC5, 0x5E);
+            r["SummaryBrush"]          = Brush(0xA8, 0x55, 0xF7);
             // Scrollbar
             r["ScrollBarThumbBrush"]   = Brush(0xB0, 0xB0, 0xB8);
             r["ScrollBarTrackBrush"]   = Brush(0xF2, 0xF2, 0xF7);

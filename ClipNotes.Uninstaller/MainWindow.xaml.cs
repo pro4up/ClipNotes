@@ -15,20 +15,18 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
-        _installDir = ReadInstallDir();
 
-        if (_installDir != null)
-        {
-            InfoText.Text =
-                $"Будут удалены все файлы приложения из:\n{_installDir}\n\n" +
-                "Также будут удалены ярлык на рабочем столе, " +
-                "запись автозапуска и запись в списке программ.";
-        }
-        else
-        {
-            InfoText.Text = "Не удалось определить путь установки.\n" +
-                            "Укажите папку вручную или закройте и удалите файлы самостоятельно.";
-        }
+        Title                          = Loc.T("uninst_WindowTitle");
+        ConfirmTitleText.Text          = Loc.T("uninst_Title");
+        DeleteUserDataCheckBox.Content = Loc.T("uninst_DeleteUserData");
+        CancelButton.Content           = Loc.T("uninst_Cancel");
+        UninstallButton.Content        = Loc.T("uninst_Uninstall");
+        CloseButton.Content            = Loc.T("uninst_Close");
+
+        _installDir = ReadInstallDir();
+        InfoText.Text = _installDir != null
+            ? Loc.T("uninst_InfoText", _installDir)
+            : Loc.T("uninst_InfoNoPath");
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -57,13 +55,12 @@ public partial class MainWindow : Window
     {
         if (_installDir == null)
         {
-            ShowResult(success: false, "Путь установки не найден.");
+            ShowResult(success: false, Loc.T("uninst_NoPath"));
             return;
         }
 
         try
         {
-            // Завершить ClipNotes если запущен
             foreach (var p in Process.GetProcessesByName("ClipNotes"))
             {
                 try { p.Kill(); p.WaitForExit(3000); } catch { }
@@ -71,13 +68,11 @@ public partial class MainWindow : Window
 
             var selfExe = Process.GetCurrentProcess().MainModule?.FileName ?? "";
 
-            // Удалить ярлык на рабочем столе
             var shortcut = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),
                 "ClipNotes.lnk");
             if (File.Exists(shortcut)) File.Delete(shortcut);
 
-            // Удалить ключ автозапуска
             try
             {
                 using var run = Registry.CurrentUser.OpenSubKey(
@@ -86,14 +81,12 @@ public partial class MainWindow : Window
             }
             catch { }
 
-            // Удалить запись Add/Remove Programs
             foreach (var root in new[] { Registry.LocalMachine, Registry.CurrentUser })
             {
                 try { root.DeleteSubKeyTree(RegKey, throwOnMissingSubKey: false); }
                 catch { }
             }
 
-            // Удалить все файлы и папки кроме себя
             foreach (var file in Directory.GetFiles(_installDir, "*", SearchOption.AllDirectories))
             {
                 if (file.Equals(selfExe, StringComparison.OrdinalIgnoreCase)) continue;
@@ -104,7 +97,6 @@ public partial class MainWindow : Window
                 try { Directory.Delete(dir, recursive: true); } catch { }
             }
 
-            // Запланировать удаление себя и папки через cmd
             var installDir = _installDir;
             Process.Start(new ProcessStartInfo
             {
@@ -117,7 +109,6 @@ public partial class MainWindow : Window
                 UseShellExecute = false,
             });
 
-            // Удалить AppData если выбрано
             if (DeleteUserDataCheckBox.IsChecked == true)
             {
                 var appData = Path.Combine(
@@ -129,22 +120,22 @@ public partial class MainWindow : Window
                 }
             }
 
-            ShowResult(success: true, $"ClipNotes удалён из\n{_installDir}");
+            ShowResult(success: true, Loc.T("uninst_Done", _installDir));
         }
         catch (Exception ex)
         {
-            ShowResult(success: false, $"Ошибка при удалении:\n{ex.Message}");
+            ShowResult(success: false, Loc.T("uninst_Failed", ex.Message));
         }
     }
 
     private void ShowResult(bool success, string message)
     {
-        ConfirmPanel.Visibility  = Visibility.Collapsed;
+        ConfirmPanel.Visibility   = Visibility.Collapsed;
         ConfirmButtons.Visibility = Visibility.Collapsed;
-        ResultPanel.Visibility   = Visibility.Visible;
-        CloseButton.Visibility   = Visibility.Visible;
+        ResultPanel.Visibility    = Visibility.Visible;
+        CloseButton.Visibility    = Visibility.Visible;
 
-        ResultText.Text    = success ? "Удаление завершено" : "Ошибка удаления";
+        ResultText.Text    = success ? Loc.T("uninst_Success") : Loc.T("uninst_Error");
         ResultDetails.Text = message;
 
         if (!success)

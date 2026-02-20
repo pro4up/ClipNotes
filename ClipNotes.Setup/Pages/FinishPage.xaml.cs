@@ -13,7 +13,10 @@ public partial class FinishPage : UserControl
     {
         _options = options;
         InitializeComponent();
-        PathText.Text = $"Установлено в: {_options.InstallPath}";
+
+        FinishTitleText.Text = Loc.T("inst_FinishTitle");
+        PathText.Text        = $"{Loc.T("inst_InstalledTo")} {_options.InstallPath}";
+        LaunchCheck.Content  = Loc.T("inst_LaunchCheck");
     }
 
     private void LaunchCheck_Changed(object sender, RoutedEventArgs e)

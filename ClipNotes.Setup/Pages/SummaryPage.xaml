@@ -1,0 +1,126 @@
+<UserControl x:Class="ClipNotes.Setup.Pages.SummaryPage"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             Background="Transparent">
+    <Grid Margin="32,20,32,12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="16"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Заголовок -->
+        <StackPanel Grid.Row="0">
+            <TextBlock x:Name="PageTitle"
+                       FontSize="20" FontWeight="SemiBold"
+                       Foreground="{DynamicResource TextPrimaryBrush}"/>
+            <TextBlock x:Name="PageSubtitle"
+                       FontSize="13"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       Margin="0,4,0,0"/>
+        </StackPanel>
+
+        <!-- Параметры -->
+        <StackPanel Grid.Row="2" VerticalAlignment="Top">
+
+            <!-- Путь установки -->
+            <Border Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1" CornerRadius="10"
+                    Padding="14,10" Margin="0,0,0,8">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock x:Name="InstallPathLabel"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
+                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                    <TextBlock x:Name="InstallPathText" Grid.Column="1"
+                               FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}"
+                               TextWrapping="Wrap" TextAlignment="Right"
+                               HorizontalAlignment="Right"/>
+                </Grid>
+            </Border>
+
+            <!-- Обработчик + Модель -->
+            <Grid Margin="0,0,0,8">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="8"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <Border Grid.Column="0"
+                        Background="{DynamicResource CardBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}"
+                        BorderThickness="1" CornerRadius="10" Padding="14,10">
+                    <StackPanel>
+                        <TextBlock x:Name="BackendLabelText"
+                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,3"/>
+                        <TextBlock x:Name="BackendText"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                    </StackPanel>
+                </Border>
+
+                <Border Grid.Column="2"
+                        Background="{DynamicResource CardBrush}"
+                        BorderBrush="{DynamicResource CardBorderBrush}"
+                        BorderThickness="1" CornerRadius="10" Padding="14,10">
+                    <StackPanel>
+                        <TextBlock x:Name="ModelLabelText"
+                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,3"/>
+                        <TextBlock x:Name="ModelText"
+                                   FontSize="13" FontWeight="SemiBold"
+                                   Foreground="{DynamicResource TextPrimaryBrush}"/>
+                        <TextBlock x:Name="ModelSizeText"
+                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <!-- Дополнительно -->
+            <Border Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource CardBorderBrush}"
+                    BorderThickness="1" CornerRadius="10"
+                    Padding="14,10" Margin="0,0,0,8">
+                <StackPanel>
+                    <TextBlock x:Name="ExtrasLabelText"
+                               FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                               Margin="0,0,0,3"/>
+                    <TextBlock x:Name="ExtrasText"
+                               FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}"/>
+                </StackPanel>
+            </Border>
+
+            <!-- Размер на диске -->
+            <Border Background="{DynamicResource CardBrush}"
+                    BorderBrush="{DynamicResource AccentBrush}"
+                    BorderThickness="1" CornerRadius="10"
+                    Padding="14,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel>
+                        <TextBlock x:Name="DiskSizeLabelText"
+                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   Margin="0,0,0,3"/>
+                        <TextBlock x:Name="DiskBreakdownText"
+                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                    </StackPanel>
+                    <TextBlock x:Name="TotalSizeText" Grid.Column="1"
+                               FontSize="18" FontWeight="SemiBold"
+                               Foreground="{DynamicResource AccentBrush}"
+                               VerticalAlignment="Center"/>
+                </Grid>
+            </Border>
+
+        </StackPanel>
+    </Grid>
+</UserControl>

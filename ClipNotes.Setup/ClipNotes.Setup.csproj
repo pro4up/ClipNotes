@@ -20,8 +20,12 @@
 
   <ItemGroup>
     <Resource Include="Resources\icon.ico" />
-    <!-- app-bundle.zip включается только при OFFLINE_BUILD -->
-    <EmbeddedResource Include="Resources\app-bundle.zip" Condition="$(DefineConstants.Contains('OFFLINE_BUILD'))" />
+    <Resource Include="Resources\ClipNotes1.png" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="lang\ru\lang.json" />
+    <EmbeddedResource Include="lang\en\lang.json" />
   </ItemGroup>
 
 </Project>

@@ -4,20 +4,20 @@
              Background="Transparent">
     <Grid Margin="32,20,32,12">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>  <!-- Заголовок -->
-            <RowDefinition Height="20"/>    <!-- Отступ -->
-            <RowDefinition Height="Auto"/>  <!-- Путь -->
-            <RowDefinition Height="12"/>    <!-- Отступ -->
-            <RowDefinition Height="Auto"/>  <!-- Доп. параметры -->
-            <RowDefinition Height="*"/>     <!-- Распорка -->
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="20"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="12"/>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
         <!-- Заголовок -->
         <StackPanel Grid.Row="0">
-            <TextBlock Text="Параметры установки"
+            <TextBlock x:Name="PageTitle"
                        FontSize="20" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
-            <TextBlock Text="Выберите папку и дополнительные параметры"
+            <TextBlock x:Name="PageSubtitle"
                        FontSize="13"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        Margin="0,4,0,0"/>
@@ -31,7 +31,7 @@
                 CornerRadius="12"
                 Padding="16,12">
             <StackPanel>
-                <TextBlock Text="Папка установки"
+                <TextBlock x:Name="InstallFolderLabel"
                            FontSize="11" FontWeight="SemiBold"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,0,0,8"/>
@@ -44,8 +44,8 @@
                     <TextBox x:Name="PathBox"
                              Grid.Column="0"
                              TextChanged="PathBox_TextChanged"/>
-                    <Button Grid.Column="2"
-                            Content="Обзор"
+                    <Button x:Name="BrowseButton"
+                            Grid.Column="2"
                             Style="{StaticResource BrowseButtonStyle}"
                             Click="BrowseButton_Click"/>
                 </Grid>
@@ -64,17 +64,15 @@
                 CornerRadius="12"
                 Padding="16,12">
             <StackPanel>
-                <TextBlock Text="Дополнительно"
+                <TextBlock x:Name="AdditionalLabel"
                            FontSize="11" FontWeight="SemiBold"
                            Foreground="{DynamicResource TextSecondaryBrush}"
                            Margin="0,0,0,10"/>
                 <CheckBox x:Name="DesktopShortcutCheck"
-                          Content="Создать ярлык на рабочем столе"
                           IsChecked="True"
                           Checked="DesktopShortcutCheck_Changed"
                           Unchecked="DesktopShortcutCheck_Changed"/>
                 <CheckBox x:Name="StartupCheck"
-                          Content="Запускать с Windows (в трее)"
                           Margin="0,10,0,0"
                           Checked="StartupCheck_Changed"
                           Unchecked="StartupCheck_Changed"/>

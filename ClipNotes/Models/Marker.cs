@@ -19,6 +19,12 @@ public partial class Marker : ObservableObject
     [ObservableProperty] private string? _audioFilePath;
     [ObservableProperty] private string? _textFilePath;
 
+    /// <summary>Длительность удержания (только для режима Удержание). null = обычный маркер.</summary>
+    public TimeSpan? HoldDuration { get; set; }
+
     [JsonIgnore]
     public string TimestampFormatted => Timestamp.ToString(@"hh\:mm\:ss");
+
+    [JsonIgnore]
+    public string HoldDurationText => HoldDuration.HasValue ? $"({HoldDuration.Value:mm\\:ss})" : "";
 }

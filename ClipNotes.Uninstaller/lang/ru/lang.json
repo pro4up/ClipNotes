@@ -1,0 +1,15 @@
+{
+  "uninst_WindowTitle":    "ClipNotes — Удаление",
+  "uninst_Title":          "Удаление ClipNotes",
+  "uninst_InfoText":       "Будут удалены все файлы приложения из:\n{0}\n\nТакже будут удалены ярлык на рабочем столе, запись автозапуска и запись в списке программ.",
+  "uninst_InfoNoPath":     "Не удалось определить путь установки.\nУкажите папку вручную или закройте и удалите файлы самостоятельно.",
+  "uninst_DeleteUserData": "Удалить настройки и данные пользователя (%AppData%\\ClipNotes)",
+  "uninst_Cancel":         "Отмена",
+  "uninst_Uninstall":      "Удалить",
+  "uninst_Close":          "Закрыть",
+  "uninst_Success":        "Удаление завершено",
+  "uninst_Error":          "Ошибка удаления",
+  "uninst_NoPath":         "Путь установки не найден.",
+  "uninst_Done":           "ClipNotes удалён из\n{0}",
+  "uninst_Failed":         "Ошибка при удалении:\n{0}"
+}

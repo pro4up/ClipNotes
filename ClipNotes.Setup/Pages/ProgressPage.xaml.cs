@@ -14,9 +14,12 @@ public partial class ProgressPage : UserControl
     {
         _options = options;
         InitializeComponent();
+
+        PageTitle.Text    = Loc.T("inst_ProgressTitle");
+        PageSubtitle.Text = Loc.T("inst_ProgressSubtitle");
+        StepText.Text     = Loc.T("inst_Preparing");
     }
 
-    /// <summary>Запустить установку. Возвращает true при успехе, false при ошибке.</summary>
     public async Task<bool> StartInstallAsync()
     {
         var installer = new InstallerService(_options);
@@ -52,15 +55,14 @@ public partial class ProgressPage : UserControl
 
     private void ShowError(Exception ex)
     {
-        StepText.Text      = "Ошибка установки";
+        StepText.Text      = Loc.T("inst_InstallError");
         StepText.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A));
         DetailsText.Text   = ex.Message;
-        AppendLog($"ОШИБКА: {ex.Message}");
+        AppendLog($"{Loc.T("inst_ErrorPrefix")} {ex.Message}");
         if (ex.InnerException != null)
             AppendLog($"  → {ex.InnerException.Message}");
         MainProgress.Foreground = new SolidColorBrush(Color.FromRgb(0xFF, 0x45, 0x3A));
 
-        // Показать кнопку «Назад» — разблокировать навигацию
         if (Window.GetWindow(this) is MainWindow mw)
             mw.UnlockAfterError();
     }

@@ -13,13 +13,11 @@ public partial class BackendPage : UserControl
         _options = options;
         InitializeComponent();
 
-#if OFFLINE_BUILD
-        CudaCard.IsEnabled = false;
-        CudaCard.Style = (Style)FindResource("CardButtonStyle");
-        CudaUnavailableBadge.Visibility = Visibility.Visible;
-        CudaSubtitle.Text = "Недоступно";
-        _options.Backend = "cpu";
-#endif
+        PageTitle.Text          = Loc.T("inst_BackendTitle");
+        PageSubtitle.Text       = Loc.T("inst_BackendSubtitle");
+        CpuDescText.Text        = Loc.T("inst_CpuDesc");
+        CpuRecommendedText.Text = Loc.T("inst_Recommended");
+        CudaDescText.Text       = Loc.T("inst_CudaDesc");
 
         UpdateSelection();
     }
@@ -32,18 +30,14 @@ public partial class BackendPage : UserControl
 
     private void CudaCard_Click(object sender, RoutedEventArgs e)
     {
-#if !OFFLINE_BUILD
         _options.Backend = "cuda";
         UpdateSelection();
-#endif
     }
 
     private void UpdateSelection()
     {
         bool isCpu = _options.Backend == "cpu";
-        CpuCard.Style = (Style)FindResource(isCpu ? "CardButtonSelectedStyle" : "CardButtonStyle");
-#if !OFFLINE_BUILD
+        CpuCard.Style  = (Style)FindResource(isCpu  ? "CardButtonSelectedStyle" : "CardButtonStyle");
         CudaCard.Style = (Style)FindResource(!isCpu ? "CardButtonSelectedStyle" : "CardButtonStyle");
-#endif
     }
 }

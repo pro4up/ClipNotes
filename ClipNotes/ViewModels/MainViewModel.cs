@@ -52,12 +52,16 @@ public partial class MainViewModel : ObservableObject
     // --- Custom output paths ---
     [ObservableProperty] private bool _useCustomVideoPath;
     [ObservableProperty] private string _customVideoPath = "";
+    [ObservableProperty] private bool _videoPathCopy;
     [ObservableProperty] private bool _useCustomAudioPath;
     [ObservableProperty] private string _customAudioPath = "";
+    [ObservableProperty] private bool _audioPathCopy;
     [ObservableProperty] private bool _useCustomTxtPath;
     [ObservableProperty] private string _customTxtPath = "";
+    [ObservableProperty] private bool _txtPathCopy;
     [ObservableProperty] private bool _useCustomTablePath;
     [ObservableProperty] private string _customTablePath = "";
+    [ObservableProperty] private bool _tablePathCopy;
 
     // --- Session naming ---
     [ObservableProperty] private string _sessionName = "";
@@ -70,6 +74,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _recordingTime = "00:00:00";
     [ObservableProperty] private string _recordingStatus = "";
     public ObservableCollection<Marker> Markers { get; } = new();
+    public string MarkersCountLabel => string.Format(Loc.T("loc_MarkersCount"), Markers.Count);
 
     // --- Review fields ---
     [ObservableProperty] private bool _isProcessing;
@@ -100,6 +105,13 @@ public partial class MainViewModel : ObservableObject
     private TimeSpan? _holdStart;
     private MarkerType _holdMarkerType;
 
+    // Hold visual indicator
+    [ObservableProperty] private bool _isHolding;
+    [ObservableProperty] private MarkerType _holdingType;
+    [ObservableProperty] private string _holdingTimerText = "0.0";
+    private DateTime _holdStartWallClock;
+    private readonly DispatcherTimer _holdTimer;
+
     // --- Tool validation ---
     [ObservableProperty] private string _toolsStatus = "";
 
@@ -129,6 +141,7 @@ public partial class MainViewModel : ObservableObject
             if (!ObsConnected) ObsStatus = Loc.T("loc_StatusObsDisconnected");
             RecordingStatus = Loc.T("loc_StatusReady");
         }
+        OnPropertyChanged(nameof(MarkersCountLabel));
         ValidateTools();
         SaveSettings();
     }
@@ -179,6 +192,13 @@ public partial class MainViewModel : ObservableObject
         _recordingTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(500) };
         _recordingTimer.Tick += OnRecordingTimerTick;
 
+        _holdTimer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+        _holdTimer.Tick += (_, _) =>
+        {
+            var elapsed = DateTime.Now - _holdStartWallClock;
+            HoldingTimerText = $"{elapsed.TotalSeconds:F1}";
+        };
+
         _obs.RecordStateChanged += OnRecordStateChanged;
         _obs.RecordStopped += OnRecordStopped;
         _obs.Error += msg =>
@@ -189,6 +209,8 @@ public partial class MainViewModel : ObservableObject
 
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
         _hotkeyService.HotkeyReleased += OnHotkeyReleased;
+
+        Markers.CollectionChanged += (_, _) => OnPropertyChanged(nameof(MarkersCountLabel));
 
         AvailableLanguages = Loc.GetAvailableLanguages();
         LoadSettings();
@@ -251,6 +273,10 @@ public partial class MainViewModel : ObservableObject
 
     partial void OnUseCustomVideoPathChanged(bool value) => SaveSettings();
     partial void OnCustomVideoPathChanged(string value) => SaveSettings();
+    partial void OnVideoPathCopyChanged(bool value) => SaveSettings();
+    partial void OnAudioPathCopyChanged(bool value) => SaveSettings();
+    partial void OnTxtPathCopyChanged(bool value) => SaveSettings();
+    partial void OnTablePathCopyChanged(bool value) => SaveSettings();
     partial void OnUseCustomAudioPathChanged(bool value) => SaveSettings();
     partial void OnCustomAudioPathChanged(string value) => SaveSettings();
     partial void OnUseCustomTxtPathChanged(bool value) => SaveSettings();
@@ -325,12 +351,16 @@ public partial class MainViewModel : ObservableObject
         ClearMarkersOnVideoLoad = s.ClearMarkersOnVideoLoad;
         UseCustomVideoPath = s.UseCustomVideoPath;
         CustomVideoPath = s.CustomVideoPath;
+        VideoPathCopy = s.VideoPathCopy;
         UseCustomAudioPath = s.UseCustomAudioPath;
         CustomAudioPath = s.CustomAudioPath;
+        AudioPathCopy = s.AudioPathCopy;
         UseCustomTxtPath = s.UseCustomTxtPath;
         CustomTxtPath = s.CustomTxtPath;
+        TxtPathCopy = s.TxtPathCopy;
         UseCustomTablePath = s.UseCustomTablePath;
         CustomTablePath = s.CustomTablePath;
+        TablePathCopy = s.TablePathCopy;
         AskSessionName = s.AskSessionName;
         AppendDateSuffix = s.AppendDateSuffix;
         DateSuffixFormat = s.DateSuffixFormat;
@@ -389,12 +419,16 @@ public partial class MainViewModel : ObservableObject
             ClearMarkersOnVideoLoad = ClearMarkersOnVideoLoad,
             UseCustomVideoPath = UseCustomVideoPath,
             CustomVideoPath = CustomVideoPath,
+            VideoPathCopy = VideoPathCopy,
             UseCustomAudioPath = UseCustomAudioPath,
             CustomAudioPath = CustomAudioPath,
+            AudioPathCopy = AudioPathCopy,
             UseCustomTxtPath = UseCustomTxtPath,
             CustomTxtPath = CustomTxtPath,
+            TxtPathCopy = TxtPathCopy,
             UseCustomTablePath = UseCustomTablePath,
             CustomTablePath = CustomTablePath,
+            TablePathCopy = TablePathCopy,
             AskSessionName = AskSessionName,
             AppendDateSuffix = AppendDateSuffix,
             DateSuffixFormat = DateSuffixFormat,
@@ -425,12 +459,16 @@ public partial class MainViewModel : ObservableObject
         HoldPostSeconds = HoldPostSeconds,
         UseCustomVideoPath = UseCustomVideoPath,
         CustomVideoPath = CustomVideoPath,
+        VideoPathCopy = VideoPathCopy,
         UseCustomAudioPath = UseCustomAudioPath,
         CustomAudioPath = CustomAudioPath,
+        AudioPathCopy = AudioPathCopy,
         UseCustomTxtPath = UseCustomTxtPath,
         CustomTxtPath = CustomTxtPath,
+        TxtPathCopy = TxtPathCopy,
         UseCustomTablePath = UseCustomTablePath,
-        CustomTablePath = CustomTablePath
+        CustomTablePath = CustomTablePath,
+        TablePathCopy = TablePathCopy
     };
 
     public void InitializeHotkeys(Window window)
@@ -549,8 +587,8 @@ public partial class MainViewModel : ObservableObject
             var now = DateTime.Now;
             var videoName = BuildVideoName(nameToUse, now);
 
-            // Create session folder
-            var sessionDir = _sessionService.CreateSessionFolder(OutputRootDirectory, string.IsNullOrEmpty(nameToUse) ? null : nameToUse);
+            // Create session folder — named after the video file (includes date suffix if configured)
+            var sessionDir = _sessionService.CreateSessionFolder(OutputRootDirectory, string.IsNullOrEmpty(videoName) ? null : videoName);
             _currentSession = new SessionData
             {
                 SessionName = Path.GetFileName(sessionDir),
@@ -608,6 +646,7 @@ public partial class MainViewModel : ObservableObject
                         _currentSession.SettingsSnapshot.SessionVideoName,
                         _currentSession.EffectiveVideoDir);
                     _currentSession.VideoFilePath = videoPath;
+                    CopyToCustomPaths(_currentSession); // copy video to custom path if copy mode
                 }
 
                 // Get duration
@@ -661,7 +700,9 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            var sessionDir = _sessionService.CreateSessionFolder(OutputRootDirectory);
+            var videoBaseName = Path.GetFileNameWithoutExtension(dialog.FileName);
+            var sessionName = BuildVideoName(videoBaseName, DateTime.Now);
+            var sessionDir = _sessionService.CreateSessionFolder(OutputRootDirectory, string.IsNullOrEmpty(sessionName) ? null : sessionName);
             _currentSession = new SessionData
             {
                 SessionName = Path.GetFileName(sessionDir),
@@ -670,6 +711,7 @@ public partial class MainViewModel : ObservableObject
                 SettingsSnapshot = CreateSettingsSnapshot(),
                 VideoFilePath = dialog.FileName
             };
+            _currentSession.SettingsSnapshot.SessionVideoName = sessionName;
             SetEffectiveDirs(_currentSession);
 
             SetupToolPaths();
@@ -701,8 +743,7 @@ public partial class MainViewModel : ObservableObject
 
         if (!TimeSpan.TryParseExact(ManualMarkerTimecode, @"hh\:mm\:ss", null, out var ts) &&
             !TimeSpan.TryParseExact(ManualMarkerTimecode, @"h\:mm\:ss", null, out ts) &&
-            !TimeSpan.TryParseExact(ManualMarkerTimecode, @"mm\:ss", null, out ts) &&
-            !TimeSpan.TryParse(ManualMarkerTimecode, out ts))
+            !TimeSpan.TryParseExact(ManualMarkerTimecode, @"mm\:ss", null, out ts))
         {
             ProcessingStatus = Loc.T("loc_StatusBadTimecode");
             return;
@@ -778,14 +819,62 @@ public partial class MainViewModel : ObservableObject
     {
         var s = session.SettingsSnapshot;
         var sf = session.SessionFolder;
-        session.EffectiveVideoDir = s.UseCustomVideoPath && !string.IsNullOrWhiteSpace(s.CustomVideoPath)
+        // Copy mode: generate to default session folder first, then copy to custom path after pipeline
+        session.EffectiveVideoDir = s.UseCustomVideoPath && !string.IsNullOrWhiteSpace(s.CustomVideoPath) && !s.VideoPathCopy
             ? s.CustomVideoPath : Path.Combine(sf, "video");
-        session.EffectiveAudioDir = s.UseCustomAudioPath && !string.IsNullOrWhiteSpace(s.CustomAudioPath)
+        session.EffectiveAudioDir = s.UseCustomAudioPath && !string.IsNullOrWhiteSpace(s.CustomAudioPath) && !s.AudioPathCopy
             ? s.CustomAudioPath : Path.Combine(sf, "audio");
-        session.EffectiveTxtDir = s.UseCustomTxtPath && !string.IsNullOrWhiteSpace(s.CustomTxtPath)
+        session.EffectiveTxtDir = s.UseCustomTxtPath && !string.IsNullOrWhiteSpace(s.CustomTxtPath) && !s.TxtPathCopy
             ? s.CustomTxtPath : Path.Combine(sf, "txt");
-        session.EffectiveTableDir = s.UseCustomTablePath && !string.IsNullOrWhiteSpace(s.CustomTablePath)
+        session.EffectiveTableDir = s.UseCustomTablePath && !string.IsNullOrWhiteSpace(s.CustomTablePath) && !s.TablePathCopy
             ? s.CustomTablePath : Path.Combine(sf, "table");
+    }
+
+    private static void CopyToCustomPaths(SessionData session)
+    {
+        var s = session.SettingsSnapshot;
+        var sf = session.SessionFolder;
+
+        if (s.UseCustomVideoPath && !string.IsNullOrWhiteSpace(s.CustomVideoPath) && s.VideoPathCopy
+            && session.VideoFilePath != null && File.Exists(session.VideoFilePath))
+        {
+            Directory.CreateDirectory(s.CustomVideoPath);
+            File.Copy(session.VideoFilePath,
+                Path.Combine(s.CustomVideoPath, Path.GetFileName(session.VideoFilePath)), overwrite: true);
+        }
+
+        if (s.UseCustomAudioPath && !string.IsNullOrWhiteSpace(s.CustomAudioPath) && s.AudioPathCopy)
+        {
+            var src = Path.Combine(sf, "audio");
+            if (Directory.Exists(src))
+            {
+                Directory.CreateDirectory(s.CustomAudioPath);
+                foreach (var f in Directory.GetFiles(src))
+                    if (!Path.GetFileName(f).Equals("master.wav", StringComparison.OrdinalIgnoreCase))
+                        File.Copy(f, Path.Combine(s.CustomAudioPath, Path.GetFileName(f)), overwrite: true);
+            }
+        }
+
+        if (s.UseCustomTxtPath && !string.IsNullOrWhiteSpace(s.CustomTxtPath) && s.TxtPathCopy)
+        {
+            var src = Path.Combine(sf, "txt");
+            if (Directory.Exists(src))
+            {
+                Directory.CreateDirectory(s.CustomTxtPath);
+                foreach (var f in Directory.GetFiles(src, "*.txt"))
+                    File.Copy(f, Path.Combine(s.CustomTxtPath, Path.GetFileName(f)), overwrite: true);
+            }
+        }
+
+        if (s.UseCustomTablePath && !string.IsNullOrWhiteSpace(s.CustomTablePath) && s.TablePathCopy)
+        {
+            var src = Path.Combine(sf, "table", "ClipNotes.xlsx");
+            if (File.Exists(src))
+            {
+                Directory.CreateDirectory(s.CustomTablePath);
+                File.Copy(src, Path.Combine(s.CustomTablePath, "ClipNotes.xlsx"), overwrite: true);
+            }
+        }
     }
 
     private string BuildVideoName(string baseName, DateTime dt)
@@ -845,6 +934,13 @@ public partial class MainViewModel : ObservableObject
     private async Task GenerateAsync()
     {
         if (_currentSession == null) return;
+        if (IsProcessing) return;
+
+        if (string.IsNullOrEmpty(_currentSession.VideoFilePath) || !File.Exists(_currentSession.VideoFilePath))
+        {
+            ProcessingStatus = Loc.T("loc_StatusNeedVideo");
+            return;
+        }
 
         IsProcessing = true;
         ProcessingStatus = Loc.T("loc_StatusProcessing");
@@ -867,6 +963,7 @@ public partial class MainViewModel : ObservableObject
                 });
 
             await pipeline.RunAsync(_currentSession, _pipelineCts.Token);
+            CopyToCustomPaths(_currentSession);
 
             ProcessingStatus = Loc.T("loc_StatusProcessingDone");
         }
@@ -941,6 +1038,65 @@ public partial class MainViewModel : ObservableObject
         // Handled via StopRecordingAsync
     }
 
+    private async Task StartHoldAsync(MarkerType type)
+    {
+        var status = await _obs.GetRecordStatusAsync();
+        if (status == null) return;
+        _holdStart = status.Value.duration;
+        _holdMarkerType = type;
+        _holdStartWallClock = DateTime.Now;
+        IsHolding = true;
+        HoldingType = type;
+        HoldingTimerText = "0.0";
+        _holdTimer.Start();
+        RecordingStatus = $"{Loc.T("loc_StatusHolding")}: {type} @ {_holdStart:hh\\:mm\\:ss}";
+    }
+
+    private async Task EndHoldAsync()
+    {
+        _holdTimer.Stop();
+        IsHolding = false;
+        if (_holdStart == null) return;
+        try
+        {
+            var status = await _obs.GetRecordStatusAsync();
+            if (status == null) return;
+
+            var holdEnd = status.Value.duration;
+            var holdDuration = holdEnd - _holdStart.Value;
+            if (holdDuration < TimeSpan.Zero) holdDuration = TimeSpan.Zero;
+
+            var marker = new Marker
+            {
+                Index = Markers.Count + 1,
+                Type = _holdMarkerType,
+                Timestamp = _holdStart.Value,
+                Timecode = _holdStart.Value.ToString(@"hh\:mm\:ss"),
+                HoldDuration = holdDuration
+            };
+
+            Markers.Add(marker);
+            SaveMarkersToSession();
+            RecordingStatus = $"[{_holdMarkerType}] {marker.TimestampFormatted} ({holdDuration:mm\\:ss})";
+        }
+        finally
+        {
+            _holdStart = null;
+        }
+    }
+
+    public async Task StartUiHoldAsync(MarkerType type)
+    {
+        if (!HoldModeEnabled || !IsRecording || _currentSession == null || _holdStart != null) return;
+        await StartHoldAsync(type);
+    }
+
+    public async Task EndUiHoldAsync()
+    {
+        if (!IsHolding || _currentSession == null) return;
+        await EndHoldAsync();
+    }
+
     private void OnHotkeyPressed(HotkeyAction action)
     {
         Application.Current.Dispatcher.Invoke(async () =>
@@ -949,10 +1105,6 @@ public partial class MainViewModel : ObservableObject
 
             if (isMarkerAction && HoldModeEnabled && IsRecording && _currentSession != null)
             {
-                // Hold mode: record start timestamp
-                var status = await _obs.GetRecordStatusAsync();
-                if (status == null) return;
-                _holdStart = status.Value.duration;
                 _holdMarkerType = action switch
                 {
                     HotkeyAction.MarkerBug => MarkerType.Bug,
@@ -960,7 +1112,7 @@ public partial class MainViewModel : ObservableObject
                     HotkeyAction.MarkerSummary => MarkerType.Summary,
                     _ => MarkerType.Note
                 };
-                RecordingStatus = $"{Loc.T("loc_StatusHolding")}... {_holdMarkerType} @ {_holdStart:hh\\:mm\\:ss}";
+                await StartHoldAsync(_holdMarkerType);
                 return;
             }
 
@@ -997,36 +1149,7 @@ public partial class MainViewModel : ObservableObject
     private void OnHotkeyReleased(HotkeyAction action)
     {
         if (!HoldModeEnabled || !IsRecording || _currentSession == null || _holdStart == null) return;
-
-        Application.Current.Dispatcher.Invoke(async () =>
-        {
-            try
-            {
-                var status = await _obs.GetRecordStatusAsync();
-                if (status == null) return;
-
-                var holdEnd = status.Value.duration;
-                var holdDuration = holdEnd - _holdStart.Value;
-                if (holdDuration < TimeSpan.Zero) holdDuration = TimeSpan.Zero;
-
-                var marker = new Marker
-                {
-                    Index = Markers.Count + 1,
-                    Type = _holdMarkerType,
-                    Timestamp = _holdStart.Value,
-                    Timecode = _holdStart.Value.ToString(@"hh\:mm\:ss"),
-                    HoldDuration = holdDuration
-                };
-
-                Markers.Add(marker);
-                SaveMarkersToSession();
-                RecordingStatus = $"[{_holdMarkerType}] {marker.TimestampFormatted} ({holdDuration:mm\\:ss})";
-            }
-            finally
-            {
-                _holdStart = null;
-            }
-        });
+        Application.Current.Dispatcher.Invoke(async () => await EndHoldAsync());
     }
 
     [RelayCommand]

@@ -20,7 +20,7 @@ public partial class App : Application
         DispatcherUnhandledException += (_, args) =>
         {
             MessageBox.Show(
-                $"Неожиданная ошибка:\n{args.Exception.Message}",
+                $"{Loc.T("inst_UnexpectedError")}\n{args.Exception.Message}",
                 "ClipNotes Setup",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);

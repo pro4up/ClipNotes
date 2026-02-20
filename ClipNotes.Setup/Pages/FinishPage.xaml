@@ -19,7 +19,7 @@
             </Border>
 
             <!-- Сообщение -->
-            <TextBlock Text="ClipNotes успешно установлен"
+            <TextBlock x:Name="FinishTitleText"
                        FontSize="20" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"
                        HorizontalAlignment="Center"/>
@@ -36,7 +36,6 @@
 
             <!-- Запустить -->
             <CheckBox x:Name="LaunchCheck"
-                      Content="Запустить ClipNotes"
                       IsChecked="True"
                       HorizontalAlignment="Center"
                       Checked="LaunchCheck_Changed"

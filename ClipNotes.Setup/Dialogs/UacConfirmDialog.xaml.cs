@@ -9,8 +9,10 @@ public partial class UacConfirmDialog : Window
     public UacConfirmDialog(string installPath)
     {
         InitializeComponent();
-        MessageText.Text =
-            $"Для установки в папку\n{installPath}\nнеобходимы права администратора.";
+        UacTitleText.Text  = Loc.T("inst_UacTitle");
+        MessageText.Text   = Loc.T("inst_UacMessage", installPath);
+        CancelButton.Content  = Loc.T("inst_UacCancel");
+        ConfirmButton.Content = Loc.T("inst_UacConfirm");
     }
 
     protected override void OnSourceInitialized(EventArgs e)

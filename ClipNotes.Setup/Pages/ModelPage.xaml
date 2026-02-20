@@ -13,21 +13,17 @@
 
         <!-- Заголовок -->
         <StackPanel Grid.Row="0">
-            <TextBlock Text="Модель распознавания речи"
+            <TextBlock x:Name="PageTitle"
                        FontSize="20" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
-            <TextBlock Text="Большие модели точнее, но требуют больше памяти"
+            <TextBlock x:Name="PageSubtitle"
                        FontSize="13"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        Margin="0,4,0,0"/>
         </StackPanel>
 
         <!-- Список моделей -->
-        <ScrollViewer Grid.Row="2"
-                      VerticalScrollBarVisibility="Auto"
-                      HorizontalScrollBarVisibility="Disabled">
-            <StackPanel x:Name="ModelList"/>
-        </ScrollViewer>
+        <StackPanel x:Name="ModelList" Grid.Row="2"/>
 
         <!-- Примечание -->
         <Border Grid.Row="4"

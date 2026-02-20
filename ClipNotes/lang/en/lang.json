@@ -37,6 +37,8 @@
 
   "loc_SubHeadOutputDir":    "Output directory",
   "loc_SubHeadCustomPaths":  "Subdirectory output paths",
+  "loc_BtnMove":             "Move",
+  "loc_BtnCopy":             "Copy",
   "loc_LabelCustomPathHint": "If unchecked — uses default path inside session folder.",
   "loc_CheckCustomVideo":    "Custom path for video (video/)",
   "loc_CheckCustomAudio":    "Custom path for audio (audio/)",
@@ -47,8 +49,10 @@
   "loc_CheckAskName":        "Ask for session name before start (if field is empty)",
   "loc_CheckAppendDate":     "Append auto-suffix to video filename",
   "loc_LabelDateFormat":     "Auto-suffix format (tags: {yyyy} {yy} {MM} {dd} {HH} {mm} {ss}):",
+  "loc_DateFormatCustom":    "Custom",
 
-  "loc_SubHeadAudio":        "Audio & timecodes",
+  "loc_SubHeadTimecodes":    "Timecodes",
+  "loc_SubHeadAudio":        "Audio",
   "loc_LabelPreSec":         "Before (sec)",
   "loc_LabelPostSec":        "After (sec)",
   "loc_LabelFormat":         "Format",
@@ -119,6 +123,7 @@
   "loc_StatusVideoLoaded":       "Video loaded",
   "loc_StatusImported":          "Markers imported",
   "loc_StatusHolding":           "Holding",
+  "loc_MarkersCount":            "Markers ({0})",
   "loc_StatusToolsOk":           "Tools: OK | Model",
   "loc_StatusToolsMissing":      "not found",
   "loc_StatusModelMissing":      "not found — select another model in Settings",

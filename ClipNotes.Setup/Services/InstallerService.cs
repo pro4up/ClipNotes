@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
-using System.Reflection;
+using System.Text.Json.Nodes;
 using ClipNotes.Setup.Models;
 using Microsoft.Win32;
 
@@ -39,51 +39,50 @@ public class InstallerService
         var modelsDir  = Path.Combine(installDir, "models");
 
         // 1. Создать папки
-        SetStep("Создание папки установки...");
+        SetStep(Loc.T("inst_StepCreateDir"));
         Directory.CreateDirectory(installDir);
         Directory.CreateDirectory(toolsDir);
         Directory.CreateDirectory(modelsDir);
-        Log($"Папка: {installDir}");
+        Log($"Dir: {installDir}");
 
 #if OFFLINE_BUILD
-        SetStep("Распаковка файлов приложения...");
-        await ExtractEmbeddedBundleAsync(installDir, ct);
+        SetStep(Loc.T("inst_StepExtractApp"));
+        await ExtractEmbeddedBundleAsync(installDir, toolsDir, ct);
 #else
-        // Ищем локальный app/ рядом с Setup.exe
         var localSrc = GetLocalSourceDir();
         if (localSrc != null)
-            Log($"Локальный источник: {localSrc}");
+            Log($"Local source: {localSrc}");
 
         // 2. Файлы приложения
         if (localSrc != null)
         {
-            SetStep("Копирование файлов приложения...");
+            SetStep(Loc.T("inst_StepCopyApp"));
             await CopyAppFilesAsync(localSrc, installDir, toolsDir, ct);
         }
         else
         {
-            SetStep("Загрузка ClipNotes...");
+            SetStep(Loc.T("inst_StepDownloadApp"));
             await DownloadAppAsync(installDir, ct);
 
             // 3. FFmpeg
-            SetStep("Загрузка FFmpeg...");
+            SetStep(Loc.T("inst_StepDownloadFfmpeg"));
             await DownloadAndExtractZipAsync(FfmpegUrl, toolsDir, "ffmpeg", ct,
                 entry => (entry.Name == "ffmpeg.exe" || entry.Name == "ffprobe.exe")
                          && entry.FullName.Contains("bin/"));
 
             // 4. whisper-cli
-            SetStep($"Загрузка whisper-cli ({_options.Backend.ToUpper()})...");
+            SetStep(Loc.T("inst_StepDownloadWhisper", _options.Backend.ToUpper()));
             var whisperUrl = _options.Backend == "cuda" ? WhisperCudaUrl : WhisperCpuUrl;
             await DownloadAndExtractZipAsync(whisperUrl, toolsDir, "whisper", ct,
                 entry => entry.Name == "whisper-cli.exe" || entry.Name.EndsWith(".dll"));
         }
 
-        // 5. Модель (локально или скачать)
+        // 5. Модель
         var modelFileName = $"ggml-{_options.Model}.bin";
         var modelDest     = Path.Combine(modelsDir, modelFileName);
         if (File.Exists(modelDest))
         {
-            Log($"Модель уже на месте: {modelFileName}");
+            Log($"Model already present: {modelFileName}");
             ProgressChanged?.Invoke(90, "");
         }
         else
@@ -93,51 +92,72 @@ public class InstallerService
 
             if (localModel != null && File.Exists(localModel))
             {
-                SetStep($"Копирование модели {_options.Model}...");
+                SetStep(Loc.T("inst_StepCopyModel", _options.Model));
                 await CopyFileWithProgressAsync(localModel, modelDest, ct);
             }
             else
             {
-                SetStep($"Загрузка модели {_options.Model}...");
-                await DownloadFileAsync(ModelBaseUrl + modelFileName, modelDest, "Модель", ct);
+                SetStep(Loc.T("inst_StepDownloadModel", _options.Model));
+                await DownloadFileAsync(ModelBaseUrl + modelFileName, modelDest, "Model", ct);
             }
         }
 #endif
 
-        // 6. Ярлык на рабочем столе
+        // 6. Ярлык
         if (_options.CreateDesktopShortcut)
         {
-            SetStep("Создание ярлыка...");
+            SetStep(Loc.T("inst_StepShortcut"));
             CreateShortcut(
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "ClipNotes.lnk"),
                 Path.Combine(installDir, "ClipNotes.exe"),
-                "ClipNotes — таймкодированные заметки");
-            Log("Ярлык на рабочем столе создан");
+                "ClipNotes");
         }
 
         // 7. Автозапуск
         if (_options.RunOnStartup)
         {
-            SetStep("Настройка автозапуска...");
+            SetStep(Loc.T("inst_StepStartup"));
             SetStartupRegistry(Path.Combine(installDir, "ClipNotes.exe"));
-            Log("Автозапуск настроен");
         }
 
-        // 8. Запись в Add/Remove Programs
-        SetStep("Регистрация в системе...");
+        // 8. Регистрация
+        SetStep(Loc.T("inst_StepRegister"));
         RegisterUninstaller(installDir);
-        Log("Приложение зарегистрировано в системе");
 
-        SetStep("Установка завершена!");
+        // 9. Сохранить язык в settings.json
+        SaveLanguageToSettings();
+
+        SetStep(Loc.T("inst_StepDone"));
         ProgressChanged?.Invoke(100, "");
+    }
+
+    private void SaveLanguageToSettings()
+    {
+        try
+        {
+            var appDataDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "ClipNotes");
+            Directory.CreateDirectory(appDataDir);
+            var settingsPath = Path.Combine(appDataDir, "settings.json");
+
+            if (File.Exists(settingsPath))
+            {
+                var node = JsonNode.Parse(File.ReadAllText(settingsPath));
+                if (node is JsonObject obj)
+                {
+                    obj["Language"] = _options.Language;
+                    File.WriteAllText(settingsPath, obj.ToJsonString());
+                    return;
+                }
+            }
+            File.WriteAllText(settingsPath, $"{{\"Language\":\"{_options.Language}\"}}");
+        }
+        catch { }
     }
 
     // ── Локальный источник ──────────────────────────────────────────────────
 
-    /// <summary>
-    /// Ищет ../app/ рядом с Setup.exe.
-    /// Возвращает путь если там есть ClipNotes.exe, иначе null.
-    /// </summary>
     private static string? GetLocalSourceDir()
     {
         try
@@ -154,11 +174,9 @@ public class InstallerService
         catch { return null; }
     }
 
-    /// <summary>Копирует exe/dll/json из srcDir и tools/ в installDir.</summary>
     private async Task CopyAppFilesAsync(
         string srcDir, string installDir, string toolsDir, CancellationToken ct)
     {
-        // Корень: exe, dll, json
         var rootFiles = Directory.GetFiles(srcDir);
         for (int i = 0; i < rootFiles.Length; i++)
         {
@@ -168,11 +186,10 @@ public class InstallerService
             File.Copy(src, Path.Combine(installDir, name), overwrite: true);
             Log($"  {name}");
             ProgressChanged?.Invoke((double)(i + 1) / rootFiles.Length * 50,
-                $"Скопировано {i + 1}/{rootFiles.Length}: {name}");
+                $"{i + 1}/{rootFiles.Length}: {name}");
             await Task.Yield();
         }
 
-        // tools/
         var srcTools = Path.Combine(srcDir, "tools");
         if (Directory.Exists(srcTools))
         {
@@ -184,12 +201,11 @@ public class InstallerService
                 File.Copy(toolFiles[i], Path.Combine(toolsDir, name), overwrite: true);
                 Log($"  tools/{name}");
                 ProgressChanged?.Invoke(50 + (double)(i + 1) / toolFiles.Length * 40,
-                    $"Скопировано tools/{name}");
+                    $"tools/{name}");
                 await Task.Yield();
             }
         }
 
-        // licenses/
         var srcLicenses = Path.Combine(srcDir, "licenses");
         if (Directory.Exists(srcLicenses))
         {
@@ -199,20 +215,20 @@ public class InstallerService
                 File.Copy(f, Path.Combine(licDir, Path.GetFileName(f)), overwrite: true);
         }
 
-        ProgressChanged?.Invoke(90, "Файлы приложения скопированы");
+        ProgressChanged?.Invoke(90, "");
     }
 
-    /// <summary>Копирует один файл с отчётом прогресса.</summary>
     private async Task CopyFileWithProgressAsync(string src, string dest, CancellationToken ct)
     {
         var total = new FileInfo(src).Length;
         using var fsIn  = File.OpenRead(src);
         using var fsOut = File.Create(dest);
-        var buf      = new byte[1 << 17]; // 128 KB
+        var buf      = new byte[1 << 17];
         long copied  = 0;
         long lastBytes = 0;
         var  sw = System.Diagnostics.Stopwatch.StartNew();
         int  read;
+        var  mb = Loc.T("inst_MB");
         while ((read = await fsIn.ReadAsync(buf, ct)) > 0)
         {
             await fsOut.WriteAsync(buf.AsMemory(0, read), ct);
@@ -224,12 +240,11 @@ public class InstallerService
                 lastBytes = copied;
                 sw.Restart();
                 double pct  = total > 0 ? (double)copied / total * 100 : 0;
-                string info = $"{copied / 1_048_576.0:F1} МБ / {total / 1_048_576.0:F1} МБ — {speed:F1} МБ/с";
+                string info = $"{copied / 1_048_576.0:F1} {mb} / {total / 1_048_576.0:F1} {mb} — {speed:F1} {mb}/s";
                 ProgressChanged?.Invoke(pct, info);
             }
         }
-        double finalPct = total > 0 ? 100.0 : 0;
-        ProgressChanged?.Invoke(finalPct, $"{total / 1_048_576.0:F1} МБ — готово");
+        ProgressChanged?.Invoke(total > 0 ? 100.0 : 0, "");
     }
 
     // ── Скачивание ──────────────────────────────────────────────────────────
@@ -240,7 +255,7 @@ public class InstallerService
         try
         {
             await DownloadFileAsync(AppReleaseUrl, tempZip, "ClipNotes", ct);
-            SetStep("Распаковка ClipNotes...");
+            SetStep(Loc.T("inst_StepExtract", "ClipNotes"));
             ZipFile.ExtractToDirectory(tempZip, installDir, overwriteFiles: true);
         }
         finally
@@ -257,7 +272,7 @@ public class InstallerService
         try
         {
             await DownloadFileAsync(url, tempZip, label, ct);
-            SetStep($"Распаковка {label}...");
+            SetStep(Loc.T("inst_StepExtract", label));
             using var archive = ZipFile.OpenRead(tempZip);
             foreach (var entry in archive.Entries)
             {
@@ -277,55 +292,72 @@ public class InstallerService
     private async Task DownloadFileAsync(
         string url, string destPath, string label, CancellationToken ct)
     {
-        Log($"Загрузка {label}: {url}");
+        Log($"Download {label}: {url}");
         var progress = new Progress<DownloadProgress>(p =>
             ProgressChanged?.Invoke(p.Percent, p.Details));
         await _download.DownloadWithProgressAsync(url, destPath, progress, ct);
     }
 
-    // ── OFFLINE (embedded bundle) ───────────────────────────────────────────
+    // ── OFFLINE ───────────────────────────────────────────────────────────────
 
 #if OFFLINE_BUILD
-    private async Task ExtractEmbeddedBundleAsync(string installDir, CancellationToken ct)
+    private static string GetOfflineBundlePath()
     {
-        var asm = Assembly.GetExecutingAssembly();
-        const string res = "ClipNotes.Setup.Resources.app-bundle.zip";
-        using var stream = asm.GetManifestResourceStream(res)
-            ?? throw new InvalidOperationException("Встроенный bundle не найден");
+        var exe = Process.GetCurrentProcess().MainModule?.FileName;
+        if (exe == null) throw new FileNotFoundException("Could not determine installer path");
+        var dir = Path.GetDirectoryName(exe)
+            ?? throw new FileNotFoundException("Could not determine installer directory");
+        var bundle = Path.Combine(dir, "ClipNotes-offline-bundle.zip");
+        if (!File.Exists(bundle))
+            throw new FileNotFoundException(
+                $"ClipNotes-offline-bundle.zip not found in {dir}");
+        return bundle;
+    }
 
-        var tempZip = Path.GetTempFileName() + ".zip";
-        try
+    private async Task ExtractEmbeddedBundleAsync(string installDir, string toolsDir, CancellationToken ct)
+    {
+        var bundlePath = GetOfflineBundlePath();
+        Log($"Offline bundle: {bundlePath}");
+        var modelsDir = Path.Combine(installDir, "models");
+        var licDir    = Path.Combine(installDir, "licenses");
+
+        using var archive = ZipFile.OpenRead(bundlePath);
+        int count = archive.Entries.Count(e => e.Length > 0);
+        int i = 0;
+        foreach (var entry in archive.Entries)
         {
-            using (var fs = File.Create(tempZip))
-                await stream.CopyToAsync(fs, ct);
+            if (entry.Length == 0) continue;
+            ct.ThrowIfCancellationRequested();
 
-            using var archive = ZipFile.OpenRead(tempZip);
-            int count = archive.Entries.Count;
-            int i = 0;
-            foreach (var entry in archive.Entries)
+            var parts    = entry.FullName.Split('/');
+            var folder   = parts[0];
+            var fileName = parts.Length > 1 ? parts[^1] : "";
+            if (string.IsNullOrEmpty(fileName)) { i++; continue; }
+
+            string? dest = folder switch
             {
-                if (entry.Length == 0) continue;
-                var dest = Path.Combine(installDir,
-                    entry.FullName.Replace('/', Path.DirectorySeparatorChar));
-                Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
-                entry.ExtractToFile(dest, overwrite: true);
-                i++;
-                ProgressChanged?.Invoke((double)i / count * 100,
-                    $"Распаковано {i}/{count} файлов");
-                if (i % 10 == 0) await Task.Yield();
-            }
-        }
-        finally
-        {
-            if (File.Exists(tempZip)) File.Delete(tempZip);
+                "app"          => Path.Combine(installDir, fileName),
+                "tools"        => Path.Combine(toolsDir,   fileName),
+                "whisper-cpu"  => _options.Backend == "cpu"  ? Path.Combine(toolsDir, fileName) : null,
+                "whisper-cuda" => _options.Backend == "cuda" ? Path.Combine(toolsDir, fileName) : null,
+                "models"       => Path.Combine(modelsDir, fileName),
+                "licenses"     => Path.Combine(licDir,    fileName),
+                _              => null,
+            };
+            if (dest == null) { i++; continue; }
+
+            Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
+            entry.ExtractToFile(dest, overwrite: true);
+            i++;
+            ProgressChanged?.Invoke((double)i / count * 100, $"{i}/{count}: {fileName}");
+            if (i % 5 == 0) await Task.Yield();
         }
     }
 #endif
 
     // ── Ярлыки и реестр ────────────────────────────────────────────────────
 
-    private static void CreateShortcut(
-        string shortcutPath, string targetPath, string description)
+    private static void CreateShortcut(string shortcutPath, string targetPath, string description)
     {
         var esc = (string s) => s.Replace("'", "''");
         var script =
@@ -373,7 +405,7 @@ public class InstallerService
         }
 
         try       { Write(Registry.LocalMachine); }
-        catch     { try { Write(Registry.CurrentUser); } catch { /* нет прав */ } }
+        catch     { try { Write(Registry.CurrentUser); } catch { } }
     }
 
     private void SetStep(string step) { Log(step); StepChanged?.Invoke(step); }

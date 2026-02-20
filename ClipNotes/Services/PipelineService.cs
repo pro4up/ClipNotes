@@ -37,7 +37,10 @@ public class PipelineService
 
         // 1. Extract master audio (once)
         StatusChanged?.Invoke("Извлечение аудио из видео...");
-        var masterAudio = Path.Combine(session.SessionFolder, "audio", "master.wav");
+        var audioDir = session.EffectiveAudioDir;
+        if (string.IsNullOrEmpty(audioDir)) audioDir = Path.Combine(session.SessionFolder, "audio");
+        Directory.CreateDirectory(audioDir);
+        var masterAudio = Path.Combine(audioDir, "master.wav");
         await _ffmpeg.ExtractMasterAudioAsync(videoPath, masterAudio, ct);
         session.MasterAudioPath = masterAudio;
 
@@ -60,11 +63,23 @@ public class PipelineService
         var works = new List<MarkerWork>(markersToProcess.Count);
         foreach (var marker in markersToProcess)
         {
-            var pre = TimeSpan.FromSeconds(settings.PreSeconds);
-            var post = TimeSpan.FromSeconds(settings.PostSeconds);
+            TimeSpan pre, post;
+            if (marker.HoldDuration.HasValue)
+            {
+                pre = TimeSpan.FromSeconds(settings.HoldPreSeconds);
+                post = TimeSpan.FromSeconds(settings.HoldPostSeconds);
+            }
+            else
+            {
+                pre = TimeSpan.FromSeconds(settings.PreSeconds);
+                post = TimeSpan.FromSeconds(settings.PostSeconds);
+            }
             var clipStart = marker.Timestamp - pre;
             if (clipStart < TimeSpan.Zero) clipStart = TimeSpan.Zero;
-            var clipEnd = marker.Timestamp + post;
+            var holdEnd = marker.HoldDuration.HasValue
+                ? marker.Timestamp + marker.HoldDuration.Value
+                : marker.Timestamp;
+            var clipEnd = holdEnd + post;
             if (clipEnd > session.Duration) clipEnd = session.Duration;
             var clipDuration = clipEnd - clipStart;
             if (clipDuration <= TimeSpan.Zero) continue;
@@ -76,7 +91,7 @@ public class PipelineService
                 "aac" => ".m4a",
                 _ => ".wav"
             };
-            var finalClipPath = Path.Combine(session.SessionFolder, "audio", baseName + ext);
+            var finalClipPath = Path.Combine(audioDir, baseName + ext);
             string? transcribeWavPath = null;
             bool deleteFinalAfterTranscription = false;
 
@@ -87,7 +102,7 @@ public class PipelineService
                     deleteFinalAfterTranscription = true;
                 else if (ext != ".wav")
                     // mp3/aac: need separate temp WAV for Whisper
-                    transcribeWavPath = Path.Combine(session.SessionFolder, "audio", baseName + "_tmp.wav");
+                    transcribeWavPath = Path.Combine(audioDir, baseName + "_tmp.wav");
                 // ext==".wav" && GenerateAudio: reuse finalClipPath — no extra cut
             }
 
@@ -128,17 +143,29 @@ public class PipelineService
             ProgressChanged?.Invoke(i, works.Count);
 
             if (marker.GenerateAudio)
-                marker.AudioFilePath = Path.Combine("audio", work.BaseName + work.Ext);
+            {
+                // Store relative path if audioDir is inside sessionFolder, else absolute
+                var defaultAudioDir = Path.Combine(session.SessionFolder, "audio");
+                marker.AudioFilePath = audioDir == defaultAudioDir
+                    ? Path.Combine("audio", work.BaseName + work.Ext)
+                    : work.FinalClipPath;
+            }
 
             if (marker.GenerateText)
             {
                 var transcribePath = work.TranscribeWavPath ?? work.FinalClipPath;
-                var txtBasePath = Path.Combine(session.SessionFolder, "txt", work.BaseName);
+                var txtDir = session.EffectiveTxtDir;
+                if (string.IsNullOrEmpty(txtDir)) txtDir = Path.Combine(session.SessionFolder, "txt");
+                Directory.CreateDirectory(txtDir);
+                var txtBasePath = Path.Combine(txtDir, work.BaseName);
 
                 var text = await _whisper.TranscribeSegmentAsync(
                     transcribePath, txtBasePath, settings.TranscriptionLanguage, glossary, ct);
                 marker.Text = text.Trim();
-                marker.TextFilePath = Path.Combine("txt", work.BaseName + ".txt");
+                var defaultTxtDir = Path.Combine(session.SessionFolder, "txt");
+                marker.TextFilePath = txtDir == defaultTxtDir
+                    ? Path.Combine("txt", work.BaseName + ".txt")
+                    : Path.Combine(txtDir, work.BaseName + ".txt");
 
                 // Cleanup temp files
                 if (work.TranscribeWavPath != null && File.Exists(work.TranscribeWavPath))
@@ -151,7 +178,10 @@ public class PipelineService
 
         // 5. Generate Excel
         StatusChanged?.Invoke("Создание Excel-отчёта...");
-        var xlsxPath = Path.Combine(session.SessionFolder, "table", "ClipNotes.xlsx");
+        var tableDir = session.EffectiveTableDir;
+        if (string.IsNullOrEmpty(tableDir)) tableDir = Path.Combine(session.SessionFolder, "table");
+        Directory.CreateDirectory(tableDir);
+        var xlsxPath = Path.Combine(tableDir, "ClipNotes.xlsx");
         _excel.GenerateReport(session, xlsxPath);
 
         // 6. Save meta

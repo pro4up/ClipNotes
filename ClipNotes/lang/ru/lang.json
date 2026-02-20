@@ -37,6 +37,8 @@
 
   "loc_SubHeadOutputDir":    "Выходная директория",
   "loc_SubHeadCustomPaths":  "Пути сохранения подкаталогов",
+  "loc_BtnMove":             "Переместить",
+  "loc_BtnCopy":             "Копировать",
   "loc_LabelCustomPathHint": "Если галочка снята — используется стандартный путь внутри папки сессии.",
   "loc_CheckCustomVideo":    "Кастомный путь для видео (video/)",
   "loc_CheckCustomAudio":    "Кастомный путь для аудио (audio/)",
@@ -47,8 +49,10 @@
   "loc_CheckAskName":        "Запрашивать имя записи перед стартом (если поле пустое)",
   "loc_CheckAppendDate":     "Добавлять авто-подпись к имени файла видео",
   "loc_LabelDateFormat":     "Формат авто-подписи (теги: {yyyy} {yy} {MM} {dd} {HH} {mm} {ss}):",
+  "loc_DateFormatCustom":    "Произвольный",
 
-  "loc_SubHeadAudio":        "Аудио и таймкоды",
+  "loc_SubHeadTimecodes":    "Таймкоды",
+  "loc_SubHeadAudio":        "Аудио",
   "loc_LabelPreSec":         "До (сек)",
   "loc_LabelPostSec":        "После (сек)",
   "loc_LabelFormat":         "Формат",
@@ -119,6 +123,7 @@
   "loc_StatusVideoLoaded":       "Видео загружено",
   "loc_StatusImported":          "Импортировано маркеров",
   "loc_StatusHolding":           "Удержание",
+  "loc_MarkersCount":            "Маркеры ({0})",
   "loc_StatusToolsOk":           "Инструменты: OK | Модель",
   "loc_StatusToolsMissing":      "не найден",
   "loc_StatusModelMissing":      "не найдена — выберите другую модель в настройках",

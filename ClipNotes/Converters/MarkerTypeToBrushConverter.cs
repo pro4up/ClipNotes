@@ -15,6 +15,7 @@ public class MarkerTypeToBrushConverter : IValueConverter
             MarkerType.Bug => "BugBrush",
             MarkerType.Task => "TaskBrush",
             MarkerType.Note => "NoteBrush",
+            MarkerType.Summary => "SummaryBrush",
             _ => null
         };
         return key != null && System.Windows.Application.Current?.TryFindResource(key) is System.Windows.Media.Brush b

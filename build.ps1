@@ -76,8 +76,9 @@ $uninstallerDir = "$scriptDir\ClipNotes.Uninstaller"
 if (Test-Path $uninstallerDir) {
     dotnet publish "$uninstallerDir\ClipNotes.Uninstaller.csproj" `
         -c $Configuration `
-        -r win-x64 --self-contained false `
+        -r win-x64 --self-contained true `
         -p:PublishSingleFile=true `
+        -p:EnableCompressionInSingleFile=true `
         -o "$compileDir" --nologo
     if ($LASTEXITCODE -ne 0) { throw "Uninstaller build failed" }
 } else {
@@ -219,26 +220,26 @@ if ($BuildOfflineSetup) {
 
     if (-not (Test-Path $setupOutputDir)) { New-Item -ItemType Directory -Path $setupOutputDir -Force | Out-Null }
 
-    # Создать bundle из app/  (без models/)
-    $bundleZip = "$setupSourceDir\Resources\app-bundle.zip"
-    Write-Host "  Creating app-bundle.zip..." -ForegroundColor Yellow
+    # Скачиваем все модели для offline bundle
+    $allModels = @("base", "small", "medium", "large-v3-turbo", "large-v3")
+    Write-Host "  Downloading all whisper models..." -ForegroundColor Yellow
+    foreach ($m in $allModels) {
+        Write-Host "    model: $m" -ForegroundColor DarkYellow
+        & "$scriptDir\tools\download-model.ps1" -ModelName $m -OutputDir $modelsOutputDir
+    }
+
+    # Скачиваем CUDA whisper для offline bundle (CPU уже в app/tools/)
+    $cudaTempDir = "$setupSourceDir\Resources\whisper-cuda-temp"
+    if (-not (Test-Path $cudaTempDir)) { New-Item -ItemType Directory -Path $cudaTempDir -Force | Out-Null }
+    Write-Host "  Downloading CUDA whisper for offline bundle..." -ForegroundColor Yellow
+    & "$scriptDir\tools\download-whisper.ps1" -OutputDir $cudaTempDir -Backend "cuda"
+
+    # Создать bundle с чёткой структурой папок
+    $bundleZip = "$setupSourceDir\Resources\ClipNotes-offline-bundle.zip"
+    Write-Host "  Creating ClipNotes-offline-bundle.zip..." -ForegroundColor Yellow
 
     if (Test-Path $bundleZip) { Remove-Item $bundleZip }
 
-    $bundleItems = @(
-        "$compileDir\ClipNotes.exe",
-        "$compileDir\*.dll"
-    )
-
-    # Добавляем tools/ если есть
-    if (Test-Path "$compileDir\tools") {
-        $bundleItems += "$compileDir\tools"
-    }
-    if (Test-Path "$compileDir\licenses") {
-        $bundleItems += "$compileDir\licenses"
-    }
-
-    # Используем ZipFile через .NET напрямую
     Add-Type -AssemblyName System.IO.Compression.FileSystem
     $zip = [System.IO.Compression.ZipFile]::Open($bundleZip, 'Create')
     try {
@@ -247,17 +248,42 @@ if ($BuildOfflineSetup) {
             [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $srcPath, $entryName, [System.IO.Compression.CompressionLevel]::Fastest) | Out-Null
         }
 
-        # Добавляем exe и dll из корня app/
+        # app/ — исполняемые файлы приложения
         Get-ChildItem "$compileDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
-            & $addFile $_.FullName $_.Name
+            & $addFile $_.FullName "app\$($_.Name)"
         }
-        # Добавляем tools/
-        if (Test-Path "$compileDir\tools") {
-            Get-ChildItem "$compileDir\tools" -File | ForEach-Object {
-                & $addFile $_.FullName "tools\$($_.Name)"
+
+        # tools/ — только FFmpeg
+        @("ffmpeg.exe", "ffprobe.exe") | ForEach-Object {
+            $f = Join-Path $toolsOutputDir $_
+            if (Test-Path $f) { & $addFile $f "tools\$_" }
+        }
+
+        # whisper-cpu/ — CPU бэкенд whisper
+        if (Test-Path $toolsOutputDir) {
+            Get-ChildItem $toolsOutputDir -File | Where-Object { $_.Name -notin @("ffmpeg.exe","ffprobe.exe") } | ForEach-Object {
+                Write-Host "    + whisper-cpu\$($_.Name)" -ForegroundColor DarkGray
+                & $addFile $_.FullName "whisper-cpu\$($_.Name)"
             }
         }
-        # Добавляем licenses/
+
+        # whisper-cuda/ — CUDA бэкенд whisper
+        if (Test-Path $cudaTempDir) {
+            Get-ChildItem $cudaTempDir -File | ForEach-Object {
+                Write-Host "    + whisper-cuda\$($_.Name)" -ForegroundColor DarkGray
+                & $addFile $_.FullName "whisper-cuda\$($_.Name)"
+            }
+        }
+
+        # models/ — все whisper-модели
+        if (Test-Path $modelsOutputDir) {
+            Get-ChildItem $modelsOutputDir -File | ForEach-Object {
+                Write-Host "    + models\$($_.Name)" -ForegroundColor DarkGray
+                & $addFile $_.FullName "models\$($_.Name)"
+            }
+        }
+
+        # licenses/
         if (Test-Path "$compileDir\licenses") {
             Get-ChildItem "$compileDir\licenses" -File | ForEach-Object {
                 & $addFile $_.FullName "licenses\$($_.Name)"
@@ -265,13 +291,14 @@ if ($BuildOfflineSetup) {
         }
     } finally {
         $zip.Dispose()
+        Remove-Item $cudaTempDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 
     $bundleSize = [math]::Round((Get-Item $bundleZip).Length / 1MB, 1)
-    Write-Host "  app-bundle.zip: $bundleSize MB" -ForegroundColor Yellow
+    Write-Host "  ClipNotes-offline-bundle.zip: $bundleSize MB" -ForegroundColor Yellow
 
     dotnet publish "$setupSourceDir\ClipNotes.Setup.csproj" `
-        -c Release -r win-x64 --self-contained true `
+        -c Release -r win-x64 --self-contained false `
         -p:PublishSingleFile=true `
         -p:DefineConstants="OFFLINE_BUILD" `
         -o "$setupOutputDir\Offline" --nologo
@@ -279,14 +306,17 @@ if ($BuildOfflineSetup) {
 
     $offlineExe = "$setupOutputDir\Offline\ClipNotes.Setup.exe"
     $destExe    = "$setupOutputDir\ClipNotes-Setup-Offline.exe"
+    $destBundle = "$setupOutputDir\ClipNotes-offline-bundle.zip"
     if (Test-Path $destExe) { Remove-Item $destExe }
+    if (Test-Path $destBundle) { Remove-Item $destBundle }
     Move-Item $offlineExe $destExe
+    Copy-Item $bundleZip $destBundle
     Remove-Item "$setupOutputDir\Offline" -Recurse -Force -ErrorAction SilentlyContinue
-
-    # Удаляем временный bundle
+    # Удаляем временный bundle из Resources и старый app-bundle.zip
     Remove-Item $bundleZip -ErrorAction SilentlyContinue
+    Remove-Item "$setupOutputDir\app-bundle.zip" -ErrorAction SilentlyContinue
 
-    Write-Host "[OK] ClipNotes-Setup-Offline.exe" -ForegroundColor Green
+    Write-Host "[OK] ClipNotes-Setup-Offline.exe + ClipNotes-offline-bundle.zip" -ForegroundColor Green
 }
 
 # ── Portable ZIP ───────────────────────────────────────────────────────────────

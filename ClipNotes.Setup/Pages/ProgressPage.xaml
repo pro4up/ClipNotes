@@ -13,10 +13,10 @@
 
         <!-- Заголовок -->
         <StackPanel Grid.Row="0">
-            <TextBlock Text="Установка ClipNotes"
+            <TextBlock x:Name="PageTitle"
                        FontSize="20" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
-            <TextBlock Text="Пожалуйста, подождите..."
+            <TextBlock x:Name="PageSubtitle"
                        FontSize="13"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        Margin="0,4,0,0"/>
@@ -31,7 +31,6 @@
                 Padding="20,16">
             <StackPanel>
                 <TextBlock x:Name="StepText"
-                           Text="Подготовка..."
                            FontSize="14" FontWeight="SemiBold"
                            Foreground="{DynamicResource TextPrimaryBrush}"
                            Margin="0,0,0,12"/>

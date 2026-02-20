@@ -42,12 +42,16 @@ public class AppSettings
     // Custom output paths per subdirectory
     public bool UseCustomVideoPath { get; set; } = false;
     public string CustomVideoPath { get; set; } = "";
+    public bool VideoPathCopy { get; set; } = false;   // false=move, true=copy
     public bool UseCustomAudioPath { get; set; } = false;
     public string CustomAudioPath { get; set; } = "";
+    public bool AudioPathCopy { get; set; } = false;
     public bool UseCustomTxtPath { get; set; } = false;
     public string CustomTxtPath { get; set; } = "";
+    public bool TxtPathCopy { get; set; } = false;
     public bool UseCustomTablePath { get; set; } = false;
     public string CustomTablePath { get; set; } = "";
+    public bool TablePathCopy { get; set; } = false;
 
     // Session naming
     public bool AskSessionName { get; set; } = true;

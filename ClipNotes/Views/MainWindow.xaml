@@ -13,7 +13,8 @@
         TextOptions.TextRenderingMode="ClearType"
         RenderOptions.ClearTypeHint="Enabled"
         Loaded="Window_Loaded" Closing="Window_Closing"
-        StateChanged="Window_StateChanged">
+        StateChanged="Window_StateChanged"
+        PreviewMouseLeftButtonUp="Window_PreviewMouseLeftButtonUp">
     <Window.DataContext>
         <vm:MainViewModel/>
     </Window.DataContext>
@@ -63,28 +64,52 @@
                     <Border Grid.Row="2" Style="{StaticResource Card}"
                             Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}">
                         <StackPanel>
-                            <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadAddMarker}"/>
-                            <StackPanel Orientation="Horizontal">
+                            <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadAddMarker}"
+                                       HorizontalAlignment="Center"/>
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center"
+                                        PreviewMouseLeftButtonDown="MarkerButtons_MouseDown">
                                 <Button Style="{StaticResource MarkerButton}" Content="Bug"
+                                        Tag="{x:Static models:MarkerType.Bug}"
                                         Background="{DynamicResource BugBrush}"
                                         Command="{Binding AddMarkerCommand}" CommandParameter="{x:Static models:MarkerType.Bug}"/>
                                 <Button Style="{StaticResource MarkerButton}" Content="Task"
+                                        Tag="{x:Static models:MarkerType.Task}"
                                         Background="{DynamicResource TaskBrush}"
                                         Command="{Binding AddMarkerCommand}" CommandParameter="{x:Static models:MarkerType.Task}"/>
                                 <Button Style="{StaticResource MarkerButton}" Content="Note"
+                                        Tag="{x:Static models:MarkerType.Note}"
                                         Background="{DynamicResource NoteBrush}"
                                         Command="{Binding AddMarkerCommand}" CommandParameter="{x:Static models:MarkerType.Note}"/>
                                 <Button Style="{StaticResource MarkerButton}" Content="Summary"
+                                        Tag="{x:Static models:MarkerType.Summary}"
                                         Background="{DynamicResource SummaryBrush}"
                                         Command="{Binding AddMarkerCommand}" CommandParameter="{x:Static models:MarkerType.Summary}"/>
                             </StackPanel>
+
+                            <!-- Hold mode indicator -->
+                            <Border x:Name="HoldIndicator" Margin="0,10,0,0"
+                                    Background="{Binding HoldingType, Converter={StaticResource MarkerTypeToBrush}}"
+                                    CornerRadius="20" Padding="14,7"
+                                    HorizontalAlignment="Center"
+                                    Visibility="{Binding IsHolding, Converter={StaticResource BoolToVis}}">
+                                <StackPanel Orientation="Horizontal">
+                                    <Ellipse Width="7" Height="7" Fill="White"
+                                             VerticalAlignment="Center" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding HoldingType}" Foreground="White"
+                                               FontSize="13" FontWeight="SemiBold"
+                                               VerticalAlignment="Center" Margin="0,0,10,0"/>
+                                    <TextBlock Text="{Binding HoldingTimerText}" Foreground="White"
+                                               FontFamily="Consolas" FontSize="15"
+                                               VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Border>
                         </StackPanel>
                     </Border>
 
                     <Border Grid.Row="3" Style="{StaticResource Card}">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Top" Style="{StaticResource SubHeading}"
-                                       Text="{Binding Markers.Count, StringFormat='Markers ({0})'}"/>
+                                       Text="{Binding MarkersCountLabel}"/>
                             <ListView ItemsSource="{Binding Markers}" BorderThickness="0" Background="Transparent"
                                       ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                 <ListView.ItemTemplate>
@@ -164,7 +189,7 @@
                         <Border Style="{StaticResource Card}">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Style="{StaticResource SubHeading}"
-                                           Text="{Binding Markers.Count, StringFormat='Markers ({0})'}"/>
+                                           Text="{Binding MarkersCountLabel}"/>
                                 <ListView ItemsSource="{Binding Markers}" BorderThickness="0" Background="Transparent"
                                           MaxHeight="300" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                                     <ListView.ItemTemplate>
@@ -251,7 +276,8 @@
                                 Content="{DynamicResource loc_BtnClearHistory}" Height="34"
                                 Command="{Binding ClearHistoryCommand}"
                                 Padding="12,0" VerticalAlignment="Center"/>
-                        <TextBlock Style="{StaticResource Heading}" Text="{DynamicResource loc_HeadHistory}"/>
+                        <TextBlock Style="{StaticResource Heading}" Text="{DynamicResource loc_HeadHistory}"
+                                   VerticalAlignment="Center" Margin="0"/>
                     </DockPanel>
 
                     <Border Grid.Row="1" Style="{StaticResource Card}">
@@ -287,8 +313,32 @@
 
             <!-- ==================== SETUP TAB (3) ==================== -->
             <TabItem Header="{DynamicResource loc_TabSettings}">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <StackPanel MaxWidth="820" Margin="32,24">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Settings left nav -->
+                    <Border Grid.Column="0" Background="{DynamicResource CardBrush}"
+                            BorderBrush="{DynamicResource BorderBrush}" BorderThickness="0,0,1,0"
+                            Padding="8,24,8,20" Width="168">
+                        <StackPanel>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="{DynamicResource loc_SubHeadTheme}"        Click="NavTo_Theme"/>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="OBS WebSocket"                             Click="NavTo_Obs"/>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="{DynamicResource loc_SubHeadOutputDir}"   Click="NavTo_OutputDir"/>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="{DynamicResource loc_SubHeadCustomPaths}" Click="NavTo_CustomPaths"/>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="{DynamicResource loc_SubHeadNaming}"      Click="NavTo_Naming"/>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="{DynamicResource loc_SubHeadTimecodes}"   Click="NavTo_Timecodes"/>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="{DynamicResource loc_SubHeadAudio}"       Click="NavTo_Audio"/>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="{DynamicResource loc_SubHeadTranscription}" Click="NavTo_Transcription"/>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="{DynamicResource loc_SubHeadHistorySet}"  Click="NavTo_HistorySet"/>
+                            <Button Style="{StaticResource SettingsNavItem}" Content="{DynamicResource loc_SubHeadHotkeys}"     Click="NavTo_Hotkeys"/>
+                        </StackPanel>
+                    </Border>
+
+                    <ScrollViewer x:Name="SettingsScroll" Grid.Column="1" VerticalScrollBarVisibility="Auto">
+                    <StackPanel MaxWidth="820" Margin="24,24">
                         <TextBlock Style="{StaticResource Heading}" Text="{DynamicResource loc_HeadSettings}"/>
 
                         <!-- Tool status banner -->
@@ -301,8 +351,35 @@
                                        TextWrapping="Wrap" FontSize="13"/>
                         </Border>
 
+                        <!-- Theme -->
+                        <Border x:Name="CardTheme" Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadTheme}"/>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
+                                    <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelTheme}"
+                                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <ComboBox SelectedIndex="{Binding SelectedThemeIndex}" Width="130">
+                                        <ComboBoxItem Content="{DynamicResource loc_ThemeLight}"/>
+                                        <ComboBoxItem Content="{DynamicResource loc_ThemeDark}"/>
+                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
+                                    <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelAppLanguage}"
+                                               VerticalAlignment="Center" Margin="0,0,12,0"/>
+                                    <ComboBox ItemsSource="{Binding AvailableLanguages}"
+                                              SelectedItem="{Binding SelectedLanguage}"
+                                              Width="100"/>
+                                </StackPanel>
+                                <CheckBox Content="{DynamicResource loc_CheckStartWithWindows}"
+                                          IsChecked="{Binding StartWithWindows}"
+                                          Margin="0,0,0,8"/>
+                                <CheckBox Content="{DynamicResource loc_CheckMinimizeToTray}"
+                                          IsChecked="{Binding MinimizeToTray}"/>
+                            </StackPanel>
+                        </Border>
+
                         <!-- OBS Connection -->
-                        <Border Style="{StaticResource Card}">
+                        <Border x:Name="CardObs" Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SubHeading}" Text="OBS WebSocket"/>
                                 <Grid>
@@ -346,8 +423,7 @@
                                     <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
                                             Content="{DynamicResource loc_BtnBrowse}" Margin="8,0,0,0"
                                             Command="{Binding BrowseObsExeCommand}"/>
-                                    <TextBox Text="{Binding ObsExePath, UpdateSourceTrigger=PropertyChanged}"
-                                             IsReadOnly="True"/>
+                                    <TextBox Text="{Binding ObsExePath, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
                                 <CheckBox Content="{DynamicResource loc_CheckAutoStartObs}"
                                           IsChecked="{Binding AutoStartObs}"/>
@@ -355,20 +431,20 @@
                         </Border>
 
                         <!-- Output Directory -->
-                        <Border Style="{StaticResource Card}">
+                        <Border x:Name="CardOutputDir" Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadOutputDir}"/>
                                 <DockPanel>
                                     <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
                                             Content="{DynamicResource loc_BtnBrowse}"
                                             Command="{Binding BrowseOutputDirectoryCommand}" Margin="8,0,0,0"/>
-                                    <TextBox Text="{Binding OutputRootDirectory, UpdateSourceTrigger=PropertyChanged}" IsReadOnly="True"/>
+                                    <TextBox Text="{Binding OutputRootDirectory, UpdateSourceTrigger=PropertyChanged}"/>
                                 </DockPanel>
                             </StackPanel>
                         </Border>
 
                         <!-- Custom output paths -->
-                        <Border Style="{StaticResource Card}">
+                        <Border x:Name="CardCustomPaths" Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadCustomPaths}"/>
                                 <TextBlock Style="{StaticResource Label}" TextWrapping="Wrap" Margin="0,0,0,8"
@@ -377,51 +453,91 @@
                                 <StackPanel Margin="0,0,0,6">
                                     <CheckBox Content="{DynamicResource loc_CheckCustomVideo}"
                                               IsChecked="{Binding UseCustomVideoPath}" Margin="0,0,0,4"/>
-                                    <DockPanel Visibility="{Binding UseCustomVideoPath, Converter={StaticResource BoolToVis}}">
-                                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
-                                                Content="{DynamicResource loc_BtnBrowse}" Margin="8,0,0,0"
-                                                Command="{Binding BrowseCustomPathCommand}" CommandParameter="video"/>
-                                        <TextBox Text="{Binding CustomVideoPath, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </DockPanel>
+                                    <StackPanel Visibility="{Binding UseCustomVideoPath, Converter={StaticResource BoolToVis}}">
+                                        <DockPanel Margin="0,0,0,6">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                                    Content="{DynamicResource loc_BtnBrowse}" Margin="8,0,0,0"
+                                                    Command="{Binding BrowseCustomPathCommand}" CommandParameter="video"/>
+                                            <TextBox Text="{Binding CustomVideoPath, UpdateSourceTrigger=PropertyChanged}"/>
+                                        </DockPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton Style="{StaticResource ModeButton}" GroupName="VideoPathMode"
+                                                         Content="{DynamicResource loc_BtnMove}" Margin="0,0,4,0"
+                                                         IsChecked="{Binding VideoPathCopy, Converter={StaticResource InverseBool}}"/>
+                                            <RadioButton Style="{StaticResource ModeButton}" GroupName="VideoPathMode"
+                                                         Content="{DynamicResource loc_BtnCopy}"
+                                                         IsChecked="{Binding VideoPathCopy}"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
                                 <!-- Audio -->
                                 <StackPanel Margin="0,0,0,6">
                                     <CheckBox Content="{DynamicResource loc_CheckCustomAudio}"
                                               IsChecked="{Binding UseCustomAudioPath}" Margin="0,0,0,4"/>
-                                    <DockPanel Visibility="{Binding UseCustomAudioPath, Converter={StaticResource BoolToVis}}">
-                                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
-                                                Content="{DynamicResource loc_BtnBrowse}" Margin="8,0,0,0"
-                                                Command="{Binding BrowseCustomPathCommand}" CommandParameter="audio"/>
-                                        <TextBox Text="{Binding CustomAudioPath, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </DockPanel>
+                                    <StackPanel Visibility="{Binding UseCustomAudioPath, Converter={StaticResource BoolToVis}}">
+                                        <DockPanel Margin="0,0,0,6">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                                    Content="{DynamicResource loc_BtnBrowse}" Margin="8,0,0,0"
+                                                    Command="{Binding BrowseCustomPathCommand}" CommandParameter="audio"/>
+                                            <TextBox Text="{Binding CustomAudioPath, UpdateSourceTrigger=PropertyChanged}"/>
+                                        </DockPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton Style="{StaticResource ModeButton}" GroupName="AudioPathMode"
+                                                         Content="{DynamicResource loc_BtnMove}" Margin="0,0,4,0"
+                                                         IsChecked="{Binding AudioPathCopy, Converter={StaticResource InverseBool}}"/>
+                                            <RadioButton Style="{StaticResource ModeButton}" GroupName="AudioPathMode"
+                                                         Content="{DynamicResource loc_BtnCopy}"
+                                                         IsChecked="{Binding AudioPathCopy}"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
                                 <!-- Txt -->
                                 <StackPanel Margin="0,0,0,6">
                                     <CheckBox Content="{DynamicResource loc_CheckCustomTxt}"
                                               IsChecked="{Binding UseCustomTxtPath}" Margin="0,0,0,4"/>
-                                    <DockPanel Visibility="{Binding UseCustomTxtPath, Converter={StaticResource BoolToVis}}">
-                                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
-                                                Content="{DynamicResource loc_BtnBrowse}" Margin="8,0,0,0"
-                                                Command="{Binding BrowseCustomPathCommand}" CommandParameter="txt"/>
-                                        <TextBox Text="{Binding CustomTxtPath, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </DockPanel>
+                                    <StackPanel Visibility="{Binding UseCustomTxtPath, Converter={StaticResource BoolToVis}}">
+                                        <DockPanel Margin="0,0,0,6">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                                    Content="{DynamicResource loc_BtnBrowse}" Margin="8,0,0,0"
+                                                    Command="{Binding BrowseCustomPathCommand}" CommandParameter="txt"/>
+                                            <TextBox Text="{Binding CustomTxtPath, UpdateSourceTrigger=PropertyChanged}"/>
+                                        </DockPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton Style="{StaticResource ModeButton}" GroupName="TxtPathMode"
+                                                         Content="{DynamicResource loc_BtnMove}" Margin="0,0,4,0"
+                                                         IsChecked="{Binding TxtPathCopy, Converter={StaticResource InverseBool}}"/>
+                                            <RadioButton Style="{StaticResource ModeButton}" GroupName="TxtPathMode"
+                                                         Content="{DynamicResource loc_BtnCopy}"
+                                                         IsChecked="{Binding TxtPathCopy}"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
                                 <!-- Table -->
                                 <StackPanel>
                                     <CheckBox Content="{DynamicResource loc_CheckCustomTable}"
                                               IsChecked="{Binding UseCustomTablePath}" Margin="0,0,0,4"/>
-                                    <DockPanel Visibility="{Binding UseCustomTablePath, Converter={StaticResource BoolToVis}}">
-                                        <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
-                                                Content="{DynamicResource loc_BtnBrowse}" Margin="8,0,0,0"
-                                                Command="{Binding BrowseCustomPathCommand}" CommandParameter="table"/>
-                                        <TextBox Text="{Binding CustomTablePath, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </DockPanel>
+                                    <StackPanel Visibility="{Binding UseCustomTablePath, Converter={StaticResource BoolToVis}}">
+                                        <DockPanel Margin="0,0,0,6">
+                                            <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
+                                                    Content="{DynamicResource loc_BtnBrowse}" Margin="8,0,0,0"
+                                                    Command="{Binding BrowseCustomPathCommand}" CommandParameter="table"/>
+                                            <TextBox Text="{Binding CustomTablePath, UpdateSourceTrigger=PropertyChanged}"/>
+                                        </DockPanel>
+                                        <StackPanel Orientation="Horizontal">
+                                            <RadioButton Style="{StaticResource ModeButton}" GroupName="TablePathMode"
+                                                         Content="{DynamicResource loc_BtnMove}" Margin="0,0,4,0"
+                                                         IsChecked="{Binding TablePathCopy, Converter={StaticResource InverseBool}}"/>
+                                            <RadioButton Style="{StaticResource ModeButton}" GroupName="TablePathMode"
+                                                         Content="{DynamicResource loc_BtnCopy}"
+                                                         IsChecked="{Binding TablePathCopy}"/>
+                                        </StackPanel>
+                                    </StackPanel>
                                 </StackPanel>
                             </StackPanel>
                         </Border>
 
                         <!-- Session naming -->
-                        <Border Style="{StaticResource Card}">
+                        <Border x:Name="CardNaming" Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadNaming}"/>
                                 <CheckBox Content="{DynamicResource loc_CheckAskName}"
@@ -438,7 +554,7 @@
                                             <ComboBoxItem Content="{}{yyyy}.{MM}.{dd}"/>
                                             <ComboBoxItem Content="{}{HH}.{mm}"/>
                                             <ComboBoxItem Content="{}{HH}.{mm}.{yy}"/>
-                                            <ComboBoxItem Content="Custom"/>
+                                            <ComboBoxItem Content="{DynamicResource loc_DateFormatCustom}" Tag="Custom"/>
                                         </ComboBox>
                                         <TextBox Text="{Binding DateSuffixFormat, UpdateSourceTrigger=PropertyChanged}"
                                                  Width="200" FontFamily="Consolas"/>
@@ -447,16 +563,12 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Audio and Timing -->
-                        <Border Style="{StaticResource Card}">
+                        <!-- Timecodes -->
+                        <Border x:Name="CardTimecodes" Style="{StaticResource Card}">
                             <StackPanel>
-                                <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadAudio}"/>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadTimecodes}"/>
                                 <Grid>
                                     <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
-                                        <ColumnDefinition Width="*"/>
-                                        <ColumnDefinition Width="12"/>
                                         <ColumnDefinition Width="*"/>
                                         <ColumnDefinition Width="12"/>
                                         <ColumnDefinition Width="*"/>
@@ -469,21 +581,10 @@
                                         <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelPostSec}"/>
                                         <TextBox Text="{Binding PostSeconds, UpdateSourceTrigger=PropertyChanged}"/>
                                     </StackPanel>
-                                    <StackPanel Grid.Column="4">
-                                        <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelFormat}"/>
-                                        <ComboBox ItemsSource="{Binding AudioCodecOptions}" SelectedItem="{Binding AudioCodec}"/>
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="6">
-                                        <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelBitrate}"/>
-                                        <TextBox Text="{Binding AudioBitrate, UpdateSourceTrigger=PropertyChanged}"/>
-                                    </StackPanel>
                                 </Grid>
-                            </StackPanel>
-                        </Border>
 
-                        <!-- Hold mode -->
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
+                                <!-- Hold mode subsection -->
+                                <Border Height="1" Background="{DynamicResource SeparatorBrush}" Margin="0,16,0,12"/>
                                 <CheckBox Content="{DynamicResource loc_CheckHoldMode}" FontWeight="SemiBold"
                                           IsChecked="{Binding HoldModeEnabled}" Margin="0,0,0,8"/>
                                 <TextBlock Style="{StaticResource Label}" TextWrapping="Wrap" Margin="0,0,0,8"
@@ -507,8 +608,30 @@
                             </StackPanel>
                         </Border>
 
+                        <!-- Audio -->
+                        <Border x:Name="CardAudio" Style="{StaticResource Card}">
+                            <StackPanel>
+                                <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadAudio}"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="12"/>
+                                        <ColumnDefinition Width="*"/>
+                                    </Grid.ColumnDefinitions>
+                                    <StackPanel Grid.Column="0">
+                                        <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelFormat}"/>
+                                        <ComboBox ItemsSource="{Binding AudioCodecOptions}" SelectedItem="{Binding AudioCodec}"/>
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelBitrate}"/>
+                                        <TextBox Text="{Binding AudioBitrate, UpdateSourceTrigger=PropertyChanged}"/>
+                                    </StackPanel>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
                         <!-- Transcription -->
-                        <Border Style="{StaticResource Card}">
+                        <Border x:Name="CardTranscription" Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadTranscription}"/>
                                 <Grid>
@@ -557,35 +680,8 @@
                             </StackPanel>
                         </Border>
 
-                        <!-- Theme -->
-                        <Border Style="{StaticResource Card}">
-                            <StackPanel>
-                                <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadTheme}"/>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
-                                    <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelTheme}"
-                                               VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <ComboBox SelectedIndex="{Binding SelectedThemeIndex}" Width="130">
-                                        <ComboBoxItem Content="{DynamicResource loc_ThemeLight}"/>
-                                        <ComboBoxItem Content="{DynamicResource loc_ThemeDark}"/>
-                                    </ComboBox>
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,12">
-                                    <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelAppLanguage}"
-                                               VerticalAlignment="Center" Margin="0,0,12,0"/>
-                                    <ComboBox ItemsSource="{Binding AvailableLanguages}"
-                                              SelectedItem="{Binding SelectedLanguage}"
-                                              Width="100"/>
-                                </StackPanel>
-                                <CheckBox Content="{DynamicResource loc_CheckStartWithWindows}"
-                                          IsChecked="{Binding StartWithWindows}"
-                                          Margin="0,0,0,8"/>
-                                <CheckBox Content="{DynamicResource loc_CheckMinimizeToTray}"
-                                          IsChecked="{Binding MinimizeToTray}"/>
-                            </StackPanel>
-                        </Border>
-
                         <!-- History settings -->
-                        <Border Style="{StaticResource Card}">
+                        <Border x:Name="CardHistorySet" Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadHistorySet}"/>
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
@@ -603,7 +699,7 @@
                         </Border>
 
                         <!-- Hotkeys -->
-                        <Border Style="{StaticResource Card}">
+                        <Border x:Name="CardHotkeys" Style="{StaticResource Card}">
                             <StackPanel>
                                 <TextBlock Style="{StaticResource SubHeading}" Text="{DynamicResource loc_SubHeadHotkeys}"/>
                                 <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelHotkeyHint}" Margin="0,0,0,8"/>
@@ -629,7 +725,8 @@
                             </StackPanel>
                         </Border>
                     </StackPanel>
-                </ScrollViewer>
+                    </ScrollViewer>
+                </Grid>
             </TabItem>
 
         </TabControl>
