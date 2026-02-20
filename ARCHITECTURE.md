@@ -32,7 +32,7 @@
 ## Структура директорий
 
 ```
-E:\Claude Workstation\Projects\ClipNotes\
+C:\Projects\ClipNotes\
 ├── source\                        ← исходный код (git repo)
 │   ├── ClipNotes.sln
 │   ├── build.ps1                  ← мастер-скрипт сборки
