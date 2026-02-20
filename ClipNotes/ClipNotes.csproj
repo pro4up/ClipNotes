@@ -7,16 +7,34 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
     <UseWindowsForms>true</UseWindowsForms>
-<AssemblyName>ClipNotes</AssemblyName>
+    <AssemblyName>ClipNotes</AssemblyName>
     <RootNamespace>ClipNotes</RootNamespace>
     <Version>1.0.0</Version>
     <ApplicationIcon>Resources\icon.ico</ApplicationIcon>
+    <!-- Exclude satellite assemblies for unused cultures -->
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
   </PropertyGroup>
 
   <ItemGroup>
     <Resource Include="Resources\icon.ico" />
     <Resource Include="Resources\tray.ico" />
   </ItemGroup>
+
+  <ItemGroup>
+    <!-- Copy lang/ folder to publish output -->
+    <Content Include="lang\**">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Remove empty satellite culture directories after publish -->
+  <Target Name="RemoveEmptySatelliteDirs" AfterTargets="Publish">
+    <ItemGroup>
+      <_SatelliteDirs Include="$(PublishDir)cs;$(PublishDir)de;$(PublishDir)es;$(PublishDir)fr;$(PublishDir)it;$(PublishDir)ja;$(PublishDir)ko;$(PublishDir)pl;$(PublishDir)pt-BR;$(PublishDir)ru;$(PublishDir)tr;$(PublishDir)zh-Hans;$(PublishDir)zh-Hant"/>
+    </ItemGroup>
+    <RemoveDir Directories="@(_SatelliteDirs)" Condition="Exists('%(Identity)')"/>
+  </Target>
 
   <ItemGroup>
     <PackageReference Include="ClosedXML" Version="0.104.2" />

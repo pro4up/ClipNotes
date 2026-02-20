@@ -1,0 +1,92 @@
+{
+  "loc_TabRecording":        "Recording",
+  "loc_TabExport":           "Export",
+  "loc_TabHistory":          "History",
+  "loc_TabSettings":         "Settings",
+
+  "loc_HeadRecording":       "Recording",
+  "loc_LabelSessionName":    "Session name:",
+  "loc_BtnStartRecording":   "Start recording",
+  "loc_BtnStopRecording":    "Stop recording",
+  "loc_SubHeadAddMarker":    "Add marker",
+
+  "loc_HeadExport":          "Export & generate",
+  "loc_SubHeadLoadVideo":    "Load video (without OBS)",
+  "loc_BtnBrowse":           "Browse",
+  "loc_VideoNotSelected":    "No video file selected",
+  "loc_LabelManualMarker":   "Add marker manually (HH:MM:SS)",
+  "loc_BtnAdd":              "+ Add",
+  "loc_BtnImportMarkers":    "Import markers",
+  "loc_CheckAudio":          "Audio",
+  "loc_CheckText":           "Text",
+  "loc_BtnGenerate":         "Generate",
+  "loc_BtnCancel":           "Cancel",
+  "loc_BtnOpenFolder":       "Open folder",
+
+  "loc_HeadHistory":         "Session history",
+  "loc_BtnClearHistory":     "Clear history",
+  "loc_BtnOpen":             "Open",
+
+  "loc_HeadSettings":        "Settings",
+  "loc_LabelObsHost":        "Host",
+  "loc_LabelObsPort":        "Port",
+  "loc_LabelObsPassword":    "Password (if set)",
+  "loc_BtnTestObs":          "Test connection",
+  "loc_LabelObsExe":         "Path to OBS Studio (obs64.exe)",
+  "loc_CheckAutoStartObs":   "Auto-start OBS with app",
+
+  "loc_SubHeadOutputDir":    "Output directory",
+  "loc_SubHeadCustomPaths":  "Subdirectory output paths",
+  "loc_LabelCustomPathHint": "If unchecked — uses default path inside session folder.",
+  "loc_CheckCustomVideo":    "Custom path for video (video/)",
+  "loc_CheckCustomAudio":    "Custom path for audio (audio/)",
+  "loc_CheckCustomTxt":      "Custom path for transcripts (txt/)",
+  "loc_CheckCustomTable":    "Custom path for table (table/)",
+
+  "loc_SubHeadNaming":       "Session naming",
+  "loc_CheckAskName":        "Ask for session name before start (if field is empty)",
+  "loc_CheckAppendDate":     "Append auto-suffix to video filename",
+  "loc_LabelDateFormat":     "Auto-suffix format (tags: {yyyy} {yy} {MM} {dd} {HH} {mm} {ss}):",
+
+  "loc_SubHeadAudio":        "Audio & timecodes",
+  "loc_LabelPreSec":         "Before (sec)",
+  "loc_LabelPostSec":        "After (sec)",
+  "loc_LabelFormat":         "Format",
+  "loc_LabelBitrate":        "Bitrate (kbps)",
+
+  "loc_CheckHoldMode":       "Hold mode",
+  "loc_LabelHoldHint":       "When holding a hotkey, audio clip duration equals the hold time.",
+  "loc_LabelHoldPre":        "Before hold (sec)",
+  "loc_LabelHoldPost":       "After hold (sec)",
+
+  "loc_SubHeadTranscription":"Transcription",
+  "loc_LabelModel":          "Model",
+  "loc_LabelLanguage":       "Language",
+  "loc_LabelGlossary":       "Glossary / prompt",
+  "loc_LabelGlossaryFile":   "Or path to glossary file",
+
+  "loc_SubHeadTheme":        "Appearance",
+  "loc_LabelTheme":          "Theme:",
+  "loc_CheckStartWithWindows":"Start with Windows",
+  "loc_CheckMinimizeToTray": "Minimize to tray",
+
+  "loc_SubHeadHistorySet":   "Session history",
+  "loc_LabelMaxHistory":     "Max sessions in history:",
+  "loc_CheckDeleteFiles":    "Delete files when clearing history",
+  "loc_CheckClearMarkers":   "Clear markers on video load",
+
+  "loc_SubHeadHotkeys":      "Hotkeys",
+  "loc_LabelHotkeyHint":     "Click a field and press the desired key combination",
+
+  "loc_LabelAppLanguage":    "UI language:",
+
+  "loc_HkMarkerBug":         "Marker: Bug",
+  "loc_HkMarkerTask":        "Marker: Task",
+  "loc_HkMarkerNote":        "Marker: Note",
+  "loc_HkMarkerSummary":     "Marker: Summary",
+  "loc_HkStartRecording":    "Start recording",
+  "loc_HkStopRecording":     "Stop recording",
+  "loc_HkGenerate":          "Generate",
+  "loc_HkOpenFolder":        "Open folder",
+  "loc_HkNotAssigned":       "Not assigned"
+}

@@ -10,6 +10,7 @@ using ClipNotes.Services;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LogSvc = ClipNotes.Services.LogService;
+using Loc = ClipNotes.Helpers.LocalizationService;
 
 namespace ClipNotes.ViewModels;
 
@@ -29,7 +30,7 @@ public partial class MainViewModel : ObservableObject
     private SessionData? _currentSession;
 
     // --- Navigation ---
-    [ObservableProperty] private int _currentTab; // 0=Setup, 1=Recording, 2=Review, 3=History
+    [ObservableProperty] private int _currentTab; // 0=Запись, 1=Экспорт, 2=История, 3=Настройки
 
     // --- Setup fields ---
     [ObservableProperty] private string _obsHost = "localhost";
@@ -47,6 +48,22 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _glossary = "";
     [ObservableProperty] private string? _glossaryFilePath;
     public ObservableCollection<HotkeyBinding> HotkeyBindings { get; } = new();
+
+    // --- Custom output paths ---
+    [ObservableProperty] private bool _useCustomVideoPath;
+    [ObservableProperty] private string _customVideoPath = "";
+    [ObservableProperty] private bool _useCustomAudioPath;
+    [ObservableProperty] private string _customAudioPath = "";
+    [ObservableProperty] private bool _useCustomTxtPath;
+    [ObservableProperty] private string _customTxtPath = "";
+    [ObservableProperty] private bool _useCustomTablePath;
+    [ObservableProperty] private string _customTablePath = "";
+
+    // --- Session naming ---
+    [ObservableProperty] private string _sessionName = "";
+    [ObservableProperty] private bool _askSessionName = true;
+    [ObservableProperty] private bool _appendDateSuffix = false;
+    [ObservableProperty] private string _dateSuffixFormat = "{yyyy}.{MM}.{dd}";
 
     // --- Recording fields ---
     [ObservableProperty] private bool _isRecording;
@@ -74,6 +91,15 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _startWithWindows;
     [ObservableProperty] private bool _minimizeToTray;
 
+    // --- Hold mode ---
+    [ObservableProperty] private bool _holdModeEnabled;
+    [ObservableProperty] private double _holdPreSeconds = 2.0;
+    [ObservableProperty] private double _holdPostSeconds = 2.0;
+
+    // Hold state (runtime)
+    private TimeSpan? _holdStart;
+    private MarkerType _holdMarkerType;
+
     // --- Tool validation ---
     [ObservableProperty] private string _toolsStatus = "";
 
@@ -81,10 +107,24 @@ public partial class MainViewModel : ObservableObject
     public ObservableCollection<SessionHistoryEntry> SessionHistory { get; } = new();
     [ObservableProperty] private int _maxHistoryCount = 20;
     [ObservableProperty] private bool _deleteFilesOnClear;
+    [ObservableProperty] private bool _clearMarkersOnVideoLoad = true;
 
     // --- Theme ---
     [ObservableProperty] private string _selectedTheme = "Светлая";
     public string[] ThemeOptions { get; } = { "Светлая", "Тёмная" };
+
+    // --- Language ---
+    [ObservableProperty] private string _selectedLanguage = "ru";
+    public List<string> AvailableLanguages { get; private set; } = [];
+
+    partial void OnSelectedLanguageChanged(string value)
+    {
+        Loc.Load(value);
+        // Refresh bindings that depend on localization
+        foreach (var hk in HotkeyBindings)
+            hk.NotifyLocalizationChanged();
+        SaveSettings();
+    }
 
     partial void OnSelectedThemeChanged(string value)
     {
@@ -103,7 +143,7 @@ public partial class MainViewModel : ObservableObject
         new("base",           "base — ~1 GB VRAM"),
     };
     public string[] LanguageOptions { get; } = { "auto", "ru", "en", "de", "fr", "es", "zh", "ja", "ko" };
-    public MarkerType[] MarkerTypeOptions { get; } = { MarkerType.Bug, MarkerType.Task, MarkerType.Note };
+    public MarkerType[] MarkerTypeOptions { get; } = { MarkerType.Bug, MarkerType.Task, MarkerType.Note, MarkerType.Summary };
 
     public MainViewModel()
     {
@@ -127,7 +167,9 @@ public partial class MainViewModel : ObservableObject
         };
 
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
+        _hotkeyService.HotkeyReleased += OnHotkeyReleased;
 
+        AvailableLanguages = Loc.GetAvailableLanguages();
         LoadSettings();
         SetupToolPaths();
         ValidateTools();
@@ -172,6 +214,31 @@ public partial class MainViewModel : ObservableObject
     partial void OnAutoStartObsChanged(bool value) => SaveSettings();
 
     partial void OnMinimizeToTrayChanged(bool value) => SaveSettings();
+
+    partial void OnClearMarkersOnVideoLoadChanged(bool value) => SaveSettings();
+
+    partial void OnHoldModeEnabledChanged(bool value)
+    {
+        if (value) _hotkeyService.EnableHoldMode();
+        else _hotkeyService.DisableHoldMode();
+        SaveSettings();
+    }
+
+    partial void OnHoldPreSecondsChanged(double value) => SaveSettings();
+    partial void OnHoldPostSecondsChanged(double value) => SaveSettings();
+
+    partial void OnUseCustomVideoPathChanged(bool value) => SaveSettings();
+    partial void OnCustomVideoPathChanged(string value) => SaveSettings();
+    partial void OnUseCustomAudioPathChanged(bool value) => SaveSettings();
+    partial void OnCustomAudioPathChanged(string value) => SaveSettings();
+    partial void OnUseCustomTxtPathChanged(bool value) => SaveSettings();
+    partial void OnCustomTxtPathChanged(string value) => SaveSettings();
+    partial void OnUseCustomTablePathChanged(bool value) => SaveSettings();
+    partial void OnCustomTablePathChanged(string value) => SaveSettings();
+
+    partial void OnAskSessionNameChanged(bool value) => SaveSettings();
+    partial void OnAppendDateSuffixChanged(bool value) => SaveSettings();
+    partial void OnDateSuffixFormatChanged(string value) => SaveSettings();
 
     partial void OnStartWithWindowsChanged(bool value)
     {
@@ -233,9 +300,30 @@ public partial class MainViewModel : ObservableObject
         StartWithWindows = s.StartWithWindows;
         MinimizeToTray = s.MinimizeToTray;
         DeleteFilesOnClear = s.DeleteFilesOnClear;
+        ClearMarkersOnVideoLoad = s.ClearMarkersOnVideoLoad;
+        UseCustomVideoPath = s.UseCustomVideoPath;
+        CustomVideoPath = s.CustomVideoPath;
+        UseCustomAudioPath = s.UseCustomAudioPath;
+        CustomAudioPath = s.CustomAudioPath;
+        UseCustomTxtPath = s.UseCustomTxtPath;
+        CustomTxtPath = s.CustomTxtPath;
+        UseCustomTablePath = s.UseCustomTablePath;
+        CustomTablePath = s.CustomTablePath;
+        AskSessionName = s.AskSessionName;
+        AppendDateSuffix = s.AppendDateSuffix;
+        DateSuffixFormat = s.DateSuffixFormat;
+        HoldPreSeconds = s.HoldPreSeconds;
+        HoldPostSeconds = s.HoldPostSeconds;
+        HoldModeEnabled = s.HoldModeEnabled; // last — triggers OnHoldModeEnabledChanged
 
         // Apply saved theme
         SelectedTheme = s.Theme; // calls OnSelectedThemeChanged → ApplyTheme
+
+        // Apply saved language (must be after AvailableLanguages is set)
+        var lang = s.Language;
+        if (!AvailableLanguages.Contains(lang)) lang = AvailableLanguages.FirstOrDefault() ?? "ru";
+        Loc.Load(lang);
+        SelectedLanguage = lang;
     }
 
     public void SaveSettings()
@@ -267,7 +355,23 @@ public partial class MainViewModel : ObservableObject
             }).ToList(),
             MaxHistoryCount = MaxHistoryCount,
             DeleteFilesOnClear = DeleteFilesOnClear,
-            SessionHistory = SessionHistory.ToList()
+            ClearMarkersOnVideoLoad = ClearMarkersOnVideoLoad,
+            UseCustomVideoPath = UseCustomVideoPath,
+            CustomVideoPath = CustomVideoPath,
+            UseCustomAudioPath = UseCustomAudioPath,
+            CustomAudioPath = CustomAudioPath,
+            UseCustomTxtPath = UseCustomTxtPath,
+            CustomTxtPath = CustomTxtPath,
+            UseCustomTablePath = UseCustomTablePath,
+            CustomTablePath = CustomTablePath,
+            AskSessionName = AskSessionName,
+            AppendDateSuffix = AppendDateSuffix,
+            DateSuffixFormat = DateSuffixFormat,
+            HoldModeEnabled = HoldModeEnabled,
+            HoldPreSeconds = HoldPreSeconds,
+            HoldPostSeconds = HoldPostSeconds,
+            SessionHistory = SessionHistory.ToList(),
+            Language = SelectedLanguage
         };
         _settingsService.Save(s);
     }
@@ -284,7 +388,18 @@ public partial class MainViewModel : ObservableObject
         WhisperModel = WhisperModel,
         TranscriptionLanguage = TranscriptionLanguage,
         Glossary = Glossary,
-        GlossaryFilePath = GlossaryFilePath
+        GlossaryFilePath = GlossaryFilePath,
+        HoldModeEnabled = HoldModeEnabled,
+        HoldPreSeconds = HoldPreSeconds,
+        HoldPostSeconds = HoldPostSeconds,
+        UseCustomVideoPath = UseCustomVideoPath,
+        CustomVideoPath = CustomVideoPath,
+        UseCustomAudioPath = UseCustomAudioPath,
+        CustomAudioPath = CustomAudioPath,
+        UseCustomTxtPath = UseCustomTxtPath,
+        CustomTxtPath = CustomTxtPath,
+        UseCustomTablePath = UseCustomTablePath,
+        CustomTablePath = CustomTablePath
     };
 
     public void InitializeHotkeys(Window window)
@@ -391,19 +506,33 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
+            // Resolve session name
+            var nameToUse = SessionName.Trim();
+            if (string.IsNullOrEmpty(nameToUse) && AskSessionName)
+            {
+                var input = InputDialog.Show("Имя записи", "Введите имя для этой записи (или оставьте пустым):", "");
+                if (input == null) return; // user cancelled
+                nameToUse = input.Trim();
+            }
+
+            var now = DateTime.Now;
+            var videoName = BuildVideoName(nameToUse, now);
+
             // Create session folder
-            var sessionDir = _sessionService.CreateSessionFolder(OutputRootDirectory);
+            var sessionDir = _sessionService.CreateSessionFolder(OutputRootDirectory, string.IsNullOrEmpty(nameToUse) ? null : nameToUse);
             _currentSession = new SessionData
             {
                 SessionName = Path.GetFileName(sessionDir),
                 SessionFolder = sessionDir,
-                StartedAt = DateTime.Now,
+                StartedAt = now,
                 SettingsSnapshot = CreateSettingsSnapshot()
             };
+            _currentSession.SettingsSnapshot.SessionVideoName = videoName;
+            SetEffectiveDirs(_currentSession);
 
-            // Set OBS record directory to session/video
-            var videoDir = Path.Combine(sessionDir, "video");
-            await _obs.SetRecordDirectoryAsync(videoDir);
+            // Set OBS record directory to effective video dir
+            Directory.CreateDirectory(_currentSession.EffectiveVideoDir);
+            await _obs.SetRecordDirectoryAsync(_currentSession.EffectiveVideoDir);
 
             // Start recording
             await _obs.StartRecordAsync();
@@ -444,7 +573,9 @@ public partial class MainViewModel : ObservableObject
                 {
                     RecordingStatus = "Перемещение видеофайла...";
                     var videoPath = await _sessionService.MoveVideoToSession(
-                        outputPath, _currentSession.SessionFolder);
+                        outputPath, _currentSession.SessionFolder,
+                        _currentSession.SettingsSnapshot.SessionVideoName,
+                        _currentSession.EffectiveVideoDir);
                     _currentSession.VideoFilePath = videoPath;
                 }
 
@@ -508,6 +639,7 @@ public partial class MainViewModel : ObservableObject
                 SettingsSnapshot = CreateSettingsSnapshot(),
                 VideoFilePath = dialog.FileName
             };
+            SetEffectiveDirs(_currentSession);
 
             SetupToolPaths();
             ValidateTools();
@@ -515,7 +647,8 @@ public partial class MainViewModel : ObservableObject
             _currentSession.Duration = dur;
 
             LoadedVideoPath = dialog.FileName;
-            Markers.Clear();
+            if (ClearMarkersOnVideoLoad)
+                Markers.Clear();
             ReviewReady = true;
             ProcessingStatus = $"Видео загружено: {Path.GetFileName(dialog.FileName)} ({dur:hh\\:mm\\:ss})";
             CurrentTab = 1; // Экспорт
@@ -554,6 +687,7 @@ public partial class MainViewModel : ObservableObject
 
         Markers.Add(marker);
         ManualMarkerTimecode = (ts + TimeSpan.FromSeconds(30)).ToString(@"hh\:mm\:ss");
+        SaveMarkersToSession();
     }
 
     [RelayCommand]
@@ -564,6 +698,84 @@ public partial class MainViewModel : ObservableObject
         // Re-index
         for (int i = 0; i < Markers.Count; i++)
             Markers[i].Index = i + 1;
+        SaveMarkersToSession();
+    }
+
+    [RelayCommand]
+    private void ImportMarkers()
+    {
+        var dialog = new Microsoft.Win32.OpenFileDialog
+        {
+            Title = "Импорт маркеров",
+            Filter = "Файлы маркеров (*.json)|*.json|Все файлы (*.*)|*.*"
+        };
+        if (dialog.ShowDialog() != true) return;
+
+        var file = _sessionService.LoadMarkersFile(dialog.FileName);
+        if (file == null || file.Markers.Count == 0)
+        {
+            ProcessingStatus = "Файл маркеров пуст или повреждён";
+            return;
+        }
+
+        foreach (var entry in file.Markers)
+        {
+            if (!Enum.TryParse<MarkerType>(entry.Type, true, out var markerType)) continue;
+            if (!TimeSpan.TryParse(entry.Timestamp, out var ts)) continue;
+
+            TimeSpan? holdDuration = null;
+            if (!string.IsNullOrEmpty(entry.HoldDuration) && TimeSpan.TryParse(entry.HoldDuration, out var hd))
+                holdDuration = hd;
+
+            Markers.Add(new Marker
+            {
+                Index = Markers.Count + 1,
+                Type = markerType,
+                Timestamp = ts,
+                Timecode = ts.ToString(@"hh\:mm\:ss"),
+                Text = entry.Text,
+                GenerateAudio = entry.GenerateAudio,
+                GenerateText = entry.GenerateText,
+                HoldDuration = holdDuration
+            });
+        }
+        ProcessingStatus = $"Импортировано маркеров: {file.Markers.Count}";
+        SaveMarkersToSession();
+    }
+
+    private void SetEffectiveDirs(SessionData session)
+    {
+        var s = session.SettingsSnapshot;
+        var sf = session.SessionFolder;
+        session.EffectiveVideoDir = s.UseCustomVideoPath && !string.IsNullOrWhiteSpace(s.CustomVideoPath)
+            ? s.CustomVideoPath : Path.Combine(sf, "video");
+        session.EffectiveAudioDir = s.UseCustomAudioPath && !string.IsNullOrWhiteSpace(s.CustomAudioPath)
+            ? s.CustomAudioPath : Path.Combine(sf, "audio");
+        session.EffectiveTxtDir = s.UseCustomTxtPath && !string.IsNullOrWhiteSpace(s.CustomTxtPath)
+            ? s.CustomTxtPath : Path.Combine(sf, "txt");
+        session.EffectiveTableDir = s.UseCustomTablePath && !string.IsNullOrWhiteSpace(s.CustomTablePath)
+            ? s.CustomTablePath : Path.Combine(sf, "table");
+    }
+
+    private string BuildVideoName(string baseName, DateTime dt)
+    {
+        if (!AppendDateSuffix || string.IsNullOrWhiteSpace(DateSuffixFormat))
+            return baseName;
+        var suffix = DateSuffixFormat
+            .Replace("{yyyy}", dt.Year.ToString("D4"))
+            .Replace("{yy}", dt.ToString("yy"))
+            .Replace("{MM}", dt.Month.ToString("D2"))
+            .Replace("{dd}", dt.Day.ToString("D2"))
+            .Replace("{HH}", dt.Hour.ToString("D2"))
+            .Replace("{mm}", dt.Minute.ToString("D2"))
+            .Replace("{ss}", dt.Second.ToString("D2"));
+        return string.IsNullOrWhiteSpace(baseName) ? suffix : $"{baseName} {suffix}";
+    }
+
+    private void SaveMarkersToSession()
+    {
+        if (_currentSession == null) return;
+        _sessionService.SaveMarkersFile(_currentSession.SessionFolder, Markers);
     }
 
     [RelayCommand]
@@ -586,7 +798,11 @@ public partial class MainViewModel : ObservableObject
                     : status.Value.timecode
             };
 
-            Application.Current?.Dispatcher.Invoke(() => Markers.Add(marker));
+            Application.Current?.Dispatcher.Invoke(() =>
+            {
+                Markers.Add(marker);
+                SaveMarkersToSession();
+            });
         }
         catch (Exception ex)
         {
@@ -699,6 +915,25 @@ public partial class MainViewModel : ObservableObject
     {
         Application.Current.Dispatcher.Invoke(async () =>
         {
+            var isMarkerAction = action is HotkeyAction.MarkerBug or HotkeyAction.MarkerTask or HotkeyAction.MarkerNote or HotkeyAction.MarkerSummary;
+
+            if (isMarkerAction && HoldModeEnabled && IsRecording && _currentSession != null)
+            {
+                // Hold mode: record start timestamp
+                var status = await _obs.GetRecordStatusAsync();
+                if (status == null) return;
+                _holdStart = status.Value.duration;
+                _holdMarkerType = action switch
+                {
+                    HotkeyAction.MarkerBug => MarkerType.Bug,
+                    HotkeyAction.MarkerTask => MarkerType.Task,
+                    HotkeyAction.MarkerSummary => MarkerType.Summary,
+                    _ => MarkerType.Note
+                };
+                RecordingStatus = $"Удержание... {_holdMarkerType} @ {_holdStart:hh\\:mm\\:ss}";
+                return;
+            }
+
             switch (action)
             {
                 case HotkeyAction.MarkerBug:
@@ -709,6 +944,9 @@ public partial class MainViewModel : ObservableObject
                     break;
                 case HotkeyAction.MarkerNote:
                     await AddMarkerAsync(MarkerType.Note);
+                    break;
+                case HotkeyAction.MarkerSummary:
+                    await AddMarkerAsync(MarkerType.Summary);
                     break;
                 case HotkeyAction.StartRecording:
                     await StartRecordingAsync();
@@ -724,6 +962,55 @@ public partial class MainViewModel : ObservableObject
                     break;
             }
         });
+    }
+
+    private void OnHotkeyReleased(HotkeyAction action)
+    {
+        if (!HoldModeEnabled || !IsRecording || _currentSession == null || _holdStart == null) return;
+
+        Application.Current.Dispatcher.Invoke(async () =>
+        {
+            try
+            {
+                var status = await _obs.GetRecordStatusAsync();
+                if (status == null) return;
+
+                var holdEnd = status.Value.duration;
+                var holdDuration = holdEnd - _holdStart.Value;
+                if (holdDuration < TimeSpan.Zero) holdDuration = TimeSpan.Zero;
+
+                var marker = new Marker
+                {
+                    Index = Markers.Count + 1,
+                    Type = _holdMarkerType,
+                    Timestamp = _holdStart.Value,
+                    Timecode = _holdStart.Value.ToString(@"hh\:mm\:ss"),
+                    HoldDuration = holdDuration
+                };
+
+                Markers.Add(marker);
+                SaveMarkersToSession();
+                RecordingStatus = $"Маркер [{_holdMarkerType}] {marker.TimestampFormatted} ({holdDuration:mm\\:ss})";
+            }
+            finally
+            {
+                _holdStart = null;
+            }
+        });
+    }
+
+    [RelayCommand]
+    private void BrowseCustomPath(string which)
+    {
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog { Description = "Выберите папку" };
+        if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
+        switch (which)
+        {
+            case "video": CustomVideoPath = dialog.SelectedPath; break;
+            case "audio": CustomAudioPath = dialog.SelectedPath; break;
+            case "txt":   CustomTxtPath   = dialog.SelectedPath; break;
+            case "table": CustomTablePath = dialog.SelectedPath; break;
+        }
     }
 
     public void Cleanup()

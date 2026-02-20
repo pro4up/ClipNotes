@@ -117,6 +117,18 @@ public partial class MainWindow : Window
                 UseShellExecute = false,
             });
 
+            // Удалить AppData если выбрано
+            if (DeleteUserDataCheckBox.IsChecked == true)
+            {
+                var appData = Path.Combine(
+                    Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                    "ClipNotes");
+                if (Directory.Exists(appData))
+                {
+                    try { Directory.Delete(appData, recursive: true); } catch { }
+                }
+            }
+
             ShowResult(success: true, $"ClipNotes удалён из\n{_installDir}");
         }
         catch (Exception ex)

@@ -1,11 +1,13 @@
+using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 
 namespace ClipNotes.Helpers;
 
 public static class PathHelper
 {
-    public static string AppDir => Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? ".";
+    public static string AppDir =>
+        Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName)
+        ?? AppContext.BaseDirectory;
 
     public static string FFmpegPath => Path.Combine(AppDir, "tools", "ffmpeg.exe");
     public static string FFprobePath => Path.Combine(AppDir, "tools", "ffprobe.exe");

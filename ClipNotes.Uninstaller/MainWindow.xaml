@@ -24,7 +24,13 @@
                        FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"
-                       LineHeight="18"/>
+                       LineHeight="18"
+                       Margin="0,0,0,12"/>
+            <CheckBox x:Name="DeleteUserDataCheckBox"
+                      Content="Удалить настройки и данные пользователя (%AppData%\ClipNotes)"
+                      FontSize="12"
+                      Foreground="{DynamicResource TextSecondaryBrush}"
+                      IsChecked="True"/>
         </StackPanel>
 
         <!-- Результат -->

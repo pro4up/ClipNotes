@@ -1,0 +1,92 @@
+{
+  "loc_TabRecording":        "Запись",
+  "loc_TabExport":           "Экспорт",
+  "loc_TabHistory":          "История",
+  "loc_TabSettings":         "Настройки",
+
+  "loc_HeadRecording":       "Запись",
+  "loc_LabelSessionName":    "Имя записи:",
+  "loc_BtnStartRecording":   "Начать запись",
+  "loc_BtnStopRecording":    "Остановить запись",
+  "loc_SubHeadAddMarker":    "Добавить маркер",
+
+  "loc_HeadExport":          "Экспорт и генерация",
+  "loc_SubHeadLoadVideo":    "Загрузить видео (без OBS)",
+  "loc_BtnBrowse":           "Обзор",
+  "loc_VideoNotSelected":    "Видеофайл не выбран",
+  "loc_LabelManualMarker":   "Добавить маркер вручную (ЧЧ:ММ:СС)",
+  "loc_BtnAdd":              "+ Добавить",
+  "loc_BtnImportMarkers":    "Импорт маркеров",
+  "loc_CheckAudio":          "Аудио",
+  "loc_CheckText":           "Текст",
+  "loc_BtnGenerate":         "Генерировать",
+  "loc_BtnCancel":           "Отмена",
+  "loc_BtnOpenFolder":       "Открыть папку",
+
+  "loc_HeadHistory":         "История сессий",
+  "loc_BtnClearHistory":     "Очистить историю",
+  "loc_BtnOpen":             "Открыть",
+
+  "loc_HeadSettings":        "Настройки",
+  "loc_LabelObsHost":        "Хост",
+  "loc_LabelObsPort":        "Порт",
+  "loc_LabelObsPassword":    "Пароль (если установлен)",
+  "loc_BtnTestObs":          "Проверить соединение",
+  "loc_LabelObsExe":         "Путь к OBS Studio (obs64.exe)",
+  "loc_CheckAutoStartObs":   "Автозапуск OBS при старте приложения",
+
+  "loc_SubHeadOutputDir":    "Выходная директория",
+  "loc_SubHeadCustomPaths":  "Пути сохранения подкаталогов",
+  "loc_LabelCustomPathHint": "Если галочка снята — используется стандартный путь внутри папки сессии.",
+  "loc_CheckCustomVideo":    "Кастомный путь для видео (video/)",
+  "loc_CheckCustomAudio":    "Кастомный путь для аудио (audio/)",
+  "loc_CheckCustomTxt":      "Кастомный путь для транскрипций (txt/)",
+  "loc_CheckCustomTable":    "Кастомный путь для таблицы (table/)",
+
+  "loc_SubHeadNaming":       "Именование записей",
+  "loc_CheckAskName":        "Запрашивать имя записи перед стартом (если поле пустое)",
+  "loc_CheckAppendDate":     "Добавлять авто-подпись к имени файла видео",
+  "loc_LabelDateFormat":     "Формат авто-подписи (теги: {yyyy} {yy} {MM} {dd} {HH} {mm} {ss}):",
+
+  "loc_SubHeadAudio":        "Аудио и таймкоды",
+  "loc_LabelPreSec":         "До (сек)",
+  "loc_LabelPostSec":        "После (сек)",
+  "loc_LabelFormat":         "Формат",
+  "loc_LabelBitrate":        "Битрейт (kbps)",
+
+  "loc_CheckHoldMode":       "Режим удержания",
+  "loc_LabelHoldHint":       "При удержании горячей клавиши длительность аудио-клипа равна времени удержания.",
+  "loc_LabelHoldPre":        "До удержания (сек)",
+  "loc_LabelHoldPost":       "После удержания (сек)",
+
+  "loc_SubHeadTranscription":"Транскрипция",
+  "loc_LabelModel":          "Модель",
+  "loc_LabelLanguage":       "Язык",
+  "loc_LabelGlossary":       "Глоссарий / промпт",
+  "loc_LabelGlossaryFile":   "Или путь к файлу глоссария",
+
+  "loc_SubHeadTheme":        "Оформление",
+  "loc_LabelTheme":          "Тема:",
+  "loc_CheckStartWithWindows":"Автозапуск вместе с Windows",
+  "loc_CheckMinimizeToTray": "Сворачивать в трей",
+
+  "loc_SubHeadHistorySet":   "История сессий",
+  "loc_LabelMaxHistory":     "Макс. сессий в истории:",
+  "loc_CheckDeleteFiles":    "Удалять файлы при очистке истории",
+  "loc_CheckClearMarkers":   "Очищать список маркеров при загрузке видео",
+
+  "loc_SubHeadHotkeys":      "Горячие клавиши",
+  "loc_LabelHotkeyHint":     "Кликните на поле и нажмите нужную комбинацию клавиш",
+
+  "loc_LabelAppLanguage":    "Язык интерфейса:",
+
+  "loc_HkMarkerBug":         "Маркер: Баг",
+  "loc_HkMarkerTask":        "Маркер: Задача",
+  "loc_HkMarkerNote":        "Маркер: Заметка",
+  "loc_HkMarkerSummary":     "Маркер: Итог",
+  "loc_HkStartRecording":    "Начать запись",
+  "loc_HkStopRecording":     "Остановить запись",
+  "loc_HkGenerate":          "Генерация",
+  "loc_HkOpenFolder":        "Открыть папку",
+  "loc_HkNotAssigned":       "Не назначено"
+}
