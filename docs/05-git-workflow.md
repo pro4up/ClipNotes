@@ -3,8 +3,9 @@
 ## Репозиторий
 
 ```
-Путь:   E:\Claude Workstation\Projects\ClipNotes\source\
-Ветка:  master
+Путь:    E:\Claude Workstation\Projects\ClipNotes\source\
+Ветка:   master
+Remote:  origin → GitHub (настраивается через gh CLI)
 ```
 
 WSL-путь для команд: `/mnt/e/Claude Workstation/Projects/ClipNotes/source`
@@ -23,7 +24,7 @@ git commit -m "..."  # коммит
 
 ## Соглашения по коммитам
 
-Формат: `<type>: <описание на русском или английском>`
+Формат: `<type>: <описание на русском>`
 
 | Тип | Когда использовать |
 |-----|-------------------|
@@ -37,57 +38,64 @@ git commit -m "..."  # коммит
 **Примеры:**
 ```
 fix: исправить deadlock при чтении stdout/stderr FFmpeg
-feat: добавить поддержку модели large-v3
-build: обновить пути в download-скриптах под новую структуру
-docs: добавить инструкцию для AI-агента
+feat: добавить Hold Mode с визуальным индикатором
+build: добавить rebuild-installers.ps1
+docs: обновить README и ARCHITECTURE для GitHub
 ```
 
 ## Правила
 
 1. **Коммитить только по запросу пользователя** — не коммитить автоматически
 2. **Добавлять файлы явно** (`git add path/to/file`) — не `git add .` или `git add -A`
-3. **Не коммитить:** `app\`, `sessions\`, `.cache\`, `*.bin`, `*.exe`
+3. **Не коммитить:** `app\`, `sessions\`, `.cache\`, `*.bin`, `Setup\`
 4. **Никогда:** `--no-verify`, `push --force` без явного запроса
 
-## .gitignore (должен содержать)
-
-```gitignore
-# Собранное приложение
-../app/
-
-# Сессии с данными
-../sessions/
-
-# Кеш зависимостей
-tools/.cache/
-
-# Стандартное .NET
-obj/
-bin/
-*.user
-.vs/
-```
-
-## Проверить .gitignore
-
-```bash
-cd '/mnt/e/Claude Workstation/Projects/ClipNotes/source'
-cat .gitignore
-```
-
-Если `../app/` и `../sessions/` не исключены — добавить.
-
-## Типичная последовательность коммита после исправления бага
+## Типичная последовательность коммита
 
 ```bash
 cd '/mnt/e/Claude Workstation/Projects/ClipNotes/source'
 
 # Посмотреть что изменено
 git diff
+git status
 
-# Добавить только нужные файлы
-git add ClipNotes/Services/AudioProcessingService.cs
+# Добавить нужные файлы
+git add ClipNotes/ViewModels/MainViewModel.cs
+git add ClipNotes/Views/MainWindow.xaml
 
-# Коммит
-git commit -m "fix: исправить deadlock при запуске whisper-cli"
+# Коммит с подписью агента
+git commit -m "$(cat <<'EOF'
+fix: исправить двойной вызов GenerateAsync
+
+Co-Authored-By: Claude Sonnet 4.6 <noreply@anthropic.com>
+EOF
+)"
 ```
+
+## Push на GitHub
+
+```bash
+# Если GitHub CLI установлен и авторизован:
+gh repo create ClipNotes --public --source=. --remote=origin --push
+
+# Или через git remote + PAT:
+git remote add origin https://USERNAME:TOKEN@github.com/USERNAME/ClipNotes.git
+git push -u origin master
+
+# Создать Release с установочниками:
+gh release create v1.0.0 \
+  '../Setup/ClipNotes-Setup.exe' \
+  '../Setup/ClipNotes-portable.zip' \
+  '../Setup/SHA256SUMS.txt' \
+  --title "ClipNotes v1.0.0"
+```
+
+## Пересборка установочников перед push
+
+```powershell
+cd 'E:\Claude Workstation\Projects\ClipNotes\source'
+.\rebuild-installers.ps1          # Online Setup + Portable ZIP
+.\rebuild-installers.ps1 -Offline # + Offline Setup (скачивает CUDA whisper)
+```
+
+Результат: `Setup\ClipNotes-Setup.exe`, `Setup\ClipNotes-portable.zip`, `Setup\SHA256SUMS.txt`
