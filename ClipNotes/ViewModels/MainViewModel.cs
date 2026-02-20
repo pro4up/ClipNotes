@@ -37,7 +37,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private int _obsPort = 4455;
     [ObservableProperty] private string _obsPassword = "";
     [ObservableProperty] private bool _obsConnected;
-    [ObservableProperty] private string _obsStatus = "Не подключено";
+    [ObservableProperty] private string _obsStatus = "";
     [ObservableProperty] private string _outputRootDirectory = "";
     [ObservableProperty] private double _preSeconds = 5.0;
     [ObservableProperty] private double _postSeconds = 5.0;
@@ -68,7 +68,7 @@ public partial class MainViewModel : ObservableObject
     // --- Recording fields ---
     [ObservableProperty] private bool _isRecording;
     [ObservableProperty] private string _recordingTime = "00:00:00";
-    [ObservableProperty] private string _recordingStatus = "Готов к записи";
+    [ObservableProperty] private string _recordingStatus = "";
     public ObservableCollection<Marker> Markers { get; } = new();
 
     // --- Review fields ---
@@ -110,8 +110,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private bool _clearMarkersOnVideoLoad = true;
 
     // --- Theme ---
-    [ObservableProperty] private string _selectedTheme = "Светлая";
-    public string[] ThemeOptions { get; } = { "Светлая", "Тёмная" };
+    [ObservableProperty] private int _selectedThemeIndex; // 0=Light, 1=Dark
     private bool _themeSetByUser;
     private bool _settingsLoaded;
 
@@ -122,30 +121,36 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedLanguageChanged(string value)
     {
         Loc.Load(value);
-        // Refresh bindings that depend on localization
         foreach (var hk in HotkeyBindings)
             hk.NotifyLocalizationChanged();
+        // Refresh status strings that are set in code
+        if (!IsRecording && !IsProcessing)
+        {
+            if (!ObsConnected) ObsStatus = Loc.T("loc_StatusObsDisconnected");
+            RecordingStatus = Loc.T("loc_StatusReady");
+        }
+        ValidateTools();
         SaveSettings();
     }
 
-    partial void OnSelectedThemeChanged(string value)
+    partial void OnSelectedThemeIndexChanged(int value)
     {
-        App.ApplyTheme(value == "Тёмная");
+        App.ApplyTheme(value == 1);
         if (_settingsLoaded) _themeSetByUser = true;
         SaveSettings();
     }
 
-    private static string DetectWindowsTheme()
+    private static int DetectWindowsTheme()
     {
         try
         {
             using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
                 @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
             if (key?.GetValue("AppsUseLightTheme") is int v && v == 0)
-                return "Тёмная";
+                return 1; // Dark
         }
         catch { }
-        return "Светлая";
+        return 0; // Light
     }
 
     // --- Audio codec options ---
@@ -179,7 +184,7 @@ public partial class MainViewModel : ObservableObject
         _obs.Error += msg =>
         {
             LogSvc.Error($"OBS: {msg}");
-            Application.Current?.Dispatcher.Invoke(() => ObsStatus = $"Ошибка: {msg}");
+            Application.Current?.Dispatcher.Invoke(() => ObsStatus = $"{Loc.T("loc_StatusObsError")}: {msg}");
         };
 
         _hotkeyService.HotkeyPressed += OnHotkeyPressed;
@@ -207,17 +212,18 @@ public partial class MainViewModel : ObservableObject
 
     private void ValidateTools()
     {
+        var missing = Loc.T("loc_StatusToolsMissing");
         var issues = new List<string>();
-        if (!File.Exists(PathHelper.FFmpegPath)) issues.Add("ffmpeg.exe не найден");
-        if (!File.Exists(PathHelper.FFprobePath)) issues.Add("ffprobe.exe не найден");
-        if (!File.Exists(PathHelper.WhisperCliPath)) issues.Add("whisper-cli.exe не найден");
+        if (!File.Exists(PathHelper.FFmpegPath)) issues.Add($"ffmpeg.exe {missing}");
+        if (!File.Exists(PathHelper.FFprobePath)) issues.Add($"ffprobe.exe {missing}");
+        if (!File.Exists(PathHelper.WhisperCliPath)) issues.Add($"whisper-cli.exe {missing}");
 
         var modelPath = PathHelper.GetModelPath(WhisperModel);
         if (!File.Exists(modelPath))
-            issues.Add($"Модель '{WhisperModel}' не найдена — выберите другую модель в настройках");
+            issues.Add($"'{WhisperModel}' {Loc.T("loc_StatusModelMissing")}");
 
         ToolsStatus = issues.Count == 0
-            ? $"Инструменты: OK | Модель: {WhisperModel}"
+            ? $"{Loc.T("loc_StatusToolsOk")}: {WhisperModel}"
             : "⚠ " + string.Join("; ", issues);
     }
 
@@ -332,16 +338,22 @@ public partial class MainViewModel : ObservableObject
         HoldPostSeconds = s.HoldPostSeconds;
         HoldModeEnabled = s.HoldModeEnabled; // last — triggers OnHoldModeEnabledChanged
 
-        // Apply theme: auto-detect from Windows on first launch, then use user's choice
-        _themeSetByUser = s.ThemeSetByUser;
-        SelectedTheme = s.ThemeSetByUser ? s.Theme : DetectWindowsTheme();
-        _settingsLoaded = true;
-
-        // Apply saved language (must be after AvailableLanguages is set)
+        // Apply saved language (must be before status strings and theme)
         var lang = s.Language;
         if (!AvailableLanguages.Contains(lang)) lang = AvailableLanguages.FirstOrDefault() ?? "ru";
         Loc.Load(lang);
         SelectedLanguage = lang;
+
+        // Apply theme: auto-detect from Windows on first launch, then use user's choice
+        _themeSetByUser = s.ThemeSetByUser;
+        SelectedThemeIndex = s.ThemeSetByUser
+            ? (s.Theme is "Dark" or "Тёмная" ? 1 : 0)
+            : DetectWindowsTheme();
+        _settingsLoaded = true;
+
+        // Init status strings after localization is loaded
+        ObsStatus = Loc.T("loc_StatusObsDisconnected");
+        RecordingStatus = Loc.T("loc_StatusReady");
     }
 
     public void SaveSettings()
@@ -364,7 +376,7 @@ public partial class MainViewModel : ObservableObject
             ObsExePath = ObsExePath,
             StartWithWindows = StartWithWindows,
             MinimizeToTray = MinimizeToTray,
-            Theme = SelectedTheme,
+            Theme = SelectedThemeIndex == 1 ? "Dark" : "Light",
             ThemeSetByUser = _themeSetByUser,
             Hotkeys = HotkeyBindings.Select(h => new HotkeyBindingData
             {
@@ -437,11 +449,11 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private async Task TestObsConnectionAsync()
     {
-        ObsStatus = "Подключение...";
+        ObsStatus = Loc.T("loc_StatusObsConnecting");
         var pw = string.IsNullOrEmpty(ObsPassword) ? null : ObsPassword;
         var ok = await _obs.ConnectAsync(ObsHost, ObsPort, pw);
         ObsConnected = ok;
-        ObsStatus = ok ? "Подключено к OBS" : "Не удалось подключиться";
+        ObsStatus = ok ? Loc.T("loc_StatusObsConnected") : Loc.T("loc_StatusObsFailed");
         if (ok) SaveSettings();
     }
 
@@ -450,7 +462,7 @@ public partial class MainViewModel : ObservableObject
     {
         var dialog = new Microsoft.Win32.OpenFolderDialog
         {
-            Title = "Выберите корневую папку для сессий"
+            Title = Loc.T("loc_DlgOutputDir")
         };
         if (dialog.ShowDialog() == true)
         {
@@ -464,8 +476,8 @@ public partial class MainViewModel : ObservableObject
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Выберите файл глоссария",
-            Filter = "Текстовые файлы (*.txt)|*.txt|Все файлы (*.*)|*.*"
+            Title = Loc.T("loc_DlgGlossary"),
+            Filter = Loc.T("loc_FilterGlossary")
         };
         if (dialog.ShowDialog() == true)
         {
@@ -498,8 +510,8 @@ public partial class MainViewModel : ObservableObject
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Выберите OBS Studio exe",
-            Filter = "OBS Studio (obs64.exe;obs32.exe)|obs64.exe;obs32.exe|Исполняемые файлы (*.exe)|*.exe"
+            Title = Loc.T("loc_DlgObsExe"),
+            Filter = Loc.T("loc_FilterObsExe")
         };
         if (dialog.ShowDialog() == true)
         {
@@ -513,13 +525,13 @@ public partial class MainViewModel : ObservableObject
     {
         if (!ObsConnected)
         {
-            RecordingStatus = "Сначала подключитесь к OBS";
+            RecordingStatus = Loc.T("loc_StatusNeedObs");
             return;
         }
 
         if (string.IsNullOrWhiteSpace(OutputRootDirectory))
         {
-            RecordingStatus = "Укажите выходную директорию";
+            RecordingStatus = Loc.T("loc_StatusNeedOutputDir");
             return;
         }
 
@@ -529,7 +541,7 @@ public partial class MainViewModel : ObservableObject
             var nameToUse = SessionName.Trim();
             if (string.IsNullOrEmpty(nameToUse) && AskSessionName)
             {
-                var input = InputDialog.Show("Имя записи", "Введите имя для этой записи (или оставьте пустым):", "");
+                var input = InputDialog.Show(Loc.T("loc_DlgSessionName"), Loc.T("loc_DlgSessionNamePrompt"), "");
                 if (input == null) return; // user cancelled
                 nameToUse = input.Trim();
             }
@@ -558,14 +570,14 @@ public partial class MainViewModel : ObservableObject
 
             IsRecording = true;
             Markers.Clear();
-            RecordingStatus = "Запись...";
+            RecordingStatus = Loc.T("loc_StatusRecording");
             RecordingTime = "00:00:00";
-            CurrentTab = 0; // Запись
+            CurrentTab = 0;
             _recordingTimer.Start();
         }
         catch (Exception ex)
         {
-            RecordingStatus = $"Ошибка: {ex.Message}";
+            RecordingStatus = $"{Loc.T("loc_StatusError")}: {ex.Message}";
         }
     }
 
@@ -576,7 +588,7 @@ public partial class MainViewModel : ObservableObject
 
         try
         {
-            RecordingStatus = "Остановка записи...";
+            RecordingStatus = Loc.T("loc_StatusStopping");
             var outputPath = await _obs.StopRecordAsync();
             _recordingTimer.Stop();
             IsRecording = false;
@@ -590,7 +602,7 @@ public partial class MainViewModel : ObservableObject
                 // Move video file
                 if (!string.IsNullOrEmpty(outputPath))
                 {
-                    RecordingStatus = "Перемещение видеофайла...";
+                    RecordingStatus = Loc.T("loc_StatusMovingVideo");
                     var videoPath = await _sessionService.MoveVideoToSession(
                         outputPath, _currentSession.SessionFolder,
                         _currentSession.SettingsSnapshot.SessionVideoName,
@@ -618,14 +630,14 @@ public partial class MainViewModel : ObservableObject
                 SessionHistory.Insert(0, entry);
                 SaveSettings();
 
-                RecordingStatus = "Запись завершена";
+                RecordingStatus = Loc.T("loc_StatusRecordingDone");
                 ReviewReady = true;
                 CurrentTab = 1; // Экспорт
             }
         }
         catch (Exception ex)
         {
-            RecordingStatus = $"Ошибка остановки: {ex.Message}";
+            RecordingStatus = $"{Loc.T("loc_StatusError")}: {ex.Message}";
         }
     }
 
@@ -634,15 +646,15 @@ public partial class MainViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(OutputRootDirectory))
         {
-            ProcessingStatus = "Сначала укажите выходную директорию в настройках";
-            CurrentTab = 3; // Настройки
+            ProcessingStatus = Loc.T("loc_StatusNeedOutputDir2");
+            CurrentTab = 3;
             return;
         }
 
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Выберите видеофайл для генерации",
-            Filter = "Видеофайлы (*.mkv;*.mp4;*.avi;*.mov;*.flv;*.wmv)|*.mkv;*.mp4;*.avi;*.mov;*.flv;*.wmv|Все файлы (*.*)|*.*"
+            Title = Loc.T("loc_DlgSelectVideo"),
+            Filter = Loc.T("loc_FilterVideo")
         };
 
         if (dialog.ShowDialog() != true) return;
@@ -669,12 +681,12 @@ public partial class MainViewModel : ObservableObject
             if (ClearMarkersOnVideoLoad)
                 Markers.Clear();
             ReviewReady = true;
-            ProcessingStatus = $"Видео загружено: {Path.GetFileName(dialog.FileName)} ({dur:hh\\:mm\\:ss})";
-            CurrentTab = 1; // Экспорт
+            ProcessingStatus = $"{Loc.T("loc_StatusVideoLoaded")}: {Path.GetFileName(dialog.FileName)} ({dur:hh\\:mm\\:ss})";
+            CurrentTab = 1;
         }
         catch (Exception ex)
         {
-            ProcessingStatus = $"Ошибка загрузки: {ex.Message}";
+            ProcessingStatus = $"{Loc.T("loc_StatusError")}: {ex.Message}";
         }
     }
 
@@ -683,7 +695,7 @@ public partial class MainViewModel : ObservableObject
     {
         if (_currentSession == null)
         {
-            ProcessingStatus = "Сначала загрузите видео (кнопка «Обзор» выше)";
+            ProcessingStatus = Loc.T("loc_StatusNeedVideo");
             return;
         }
 
@@ -692,7 +704,7 @@ public partial class MainViewModel : ObservableObject
             !TimeSpan.TryParseExact(ManualMarkerTimecode, @"mm\:ss", null, out ts) &&
             !TimeSpan.TryParse(ManualMarkerTimecode, out ts))
         {
-            ProcessingStatus = "Неверный формат тайм-кода. Используйте ЧЧ:ММ:СС";
+            ProcessingStatus = Loc.T("loc_StatusBadTimecode");
             return;
         }
 
@@ -725,15 +737,15 @@ public partial class MainViewModel : ObservableObject
     {
         var dialog = new Microsoft.Win32.OpenFileDialog
         {
-            Title = "Импорт маркеров",
-            Filter = "Файлы маркеров (*.json)|*.json|Все файлы (*.*)|*.*"
+            Title = Loc.T("loc_DlgImportMarkers"),
+            Filter = Loc.T("loc_FilterMarkers")
         };
         if (dialog.ShowDialog() != true) return;
 
         var file = _sessionService.LoadMarkersFile(dialog.FileName);
         if (file == null || file.Markers.Count == 0)
         {
-            ProcessingStatus = "Файл маркеров пуст или повреждён";
+            ProcessingStatus = Loc.T("loc_StatusMarkersEmpty");
             return;
         }
 
@@ -758,7 +770,7 @@ public partial class MainViewModel : ObservableObject
                 HoldDuration = holdDuration
             });
         }
-        ProcessingStatus = $"Импортировано маркеров: {file.Markers.Count}";
+        ProcessingStatus = $"{Loc.T("loc_StatusImported")}: {file.Markers.Count}";
         SaveMarkersToSession();
     }
 
@@ -825,7 +837,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
-            RecordingStatus = $"Ошибка маркера: {ex.Message}";
+            RecordingStatus = $"{Loc.T("loc_StatusError")}: {ex.Message}";
         }
     }
 
@@ -835,7 +847,7 @@ public partial class MainViewModel : ObservableObject
         if (_currentSession == null) return;
 
         IsProcessing = true;
-        ProcessingStatus = "Начало обработки...";
+        ProcessingStatus = Loc.T("loc_StatusProcessing");
         ProcessingProgress = 0;
         _pipelineCts = new CancellationTokenSource();
 
@@ -856,18 +868,17 @@ public partial class MainViewModel : ObservableObject
 
             await pipeline.RunAsync(_currentSession, _pipelineCts.Token);
 
-            ProcessingStatus = "Генерация завершена!";
+            ProcessingStatus = Loc.T("loc_StatusProcessingDone");
         }
         catch (OperationCanceledException)
         {
-            ProcessingStatus = "Отменено";
+            ProcessingStatus = Loc.T("loc_StatusCancelled");
         }
         catch (Exception ex)
         {
             LogSvc.Error("Generation pipeline failed", ex);
-            // Show brief message; full details in Logs/
             var msg = ex.Message.Length > 300 ? ex.Message[..300] + "…" : ex.Message;
-            ProcessingStatus = $"Ошибка: {msg}";
+            ProcessingStatus = $"{Loc.T("loc_StatusError")}: {msg}";
         }
         finally
         {
@@ -916,10 +927,10 @@ public partial class MainViewModel : ObservableObject
         {
             RecordingStatus = state switch
             {
-                "OBS_WEBSOCKET_OUTPUT_STARTING" => "Запись начинается...",
-                "OBS_WEBSOCKET_OUTPUT_STARTED" => "Запись...",
-                "OBS_WEBSOCKET_OUTPUT_STOPPING" => "Запись останавливается...",
-                "OBS_WEBSOCKET_OUTPUT_STOPPED" => "Запись остановлена",
+                "OBS_WEBSOCKET_OUTPUT_STARTING" => Loc.T("loc_StatusObsStarting"),
+                "OBS_WEBSOCKET_OUTPUT_STARTED"  => Loc.T("loc_StatusRecording"),
+                "OBS_WEBSOCKET_OUTPUT_STOPPING" => Loc.T("loc_StatusObsStopping"),
+                "OBS_WEBSOCKET_OUTPUT_STOPPED"  => Loc.T("loc_StatusObsStopped"),
                 _ => state
             };
         });
@@ -949,7 +960,7 @@ public partial class MainViewModel : ObservableObject
                     HotkeyAction.MarkerSummary => MarkerType.Summary,
                     _ => MarkerType.Note
                 };
-                RecordingStatus = $"Удержание... {_holdMarkerType} @ {_holdStart:hh\\:mm\\:ss}";
+                RecordingStatus = $"{Loc.T("loc_StatusHolding")}... {_holdMarkerType} @ {_holdStart:hh\\:mm\\:ss}";
                 return;
             }
 
@@ -1009,7 +1020,7 @@ public partial class MainViewModel : ObservableObject
 
                 Markers.Add(marker);
                 SaveMarkersToSession();
-                RecordingStatus = $"Маркер [{_holdMarkerType}] {marker.TimestampFormatted} ({holdDuration:mm\\:ss})";
+                RecordingStatus = $"[{_holdMarkerType}] {marker.TimestampFormatted} ({holdDuration:mm\\:ss})";
             }
             finally
             {
@@ -1021,7 +1032,7 @@ public partial class MainViewModel : ObservableObject
     [RelayCommand]
     private void BrowseCustomPath(string which)
     {
-        using var dialog = new System.Windows.Forms.FolderBrowserDialog { Description = "Выберите папку" };
+        using var dialog = new System.Windows.Forms.FolderBrowserDialog { Description = Loc.T("loc_DlgSelectFolder") };
         if (dialog.ShowDialog() != System.Windows.Forms.DialogResult.OK) return;
         switch (which)
         {
