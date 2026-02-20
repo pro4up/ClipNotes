@@ -112,6 +112,8 @@ public partial class MainViewModel : ObservableObject
     // --- Theme ---
     [ObservableProperty] private string _selectedTheme = "Светлая";
     public string[] ThemeOptions { get; } = { "Светлая", "Тёмная" };
+    private bool _themeSetByUser;
+    private bool _settingsLoaded;
 
     // --- Language ---
     [ObservableProperty] private string _selectedLanguage = "ru";
@@ -129,7 +131,21 @@ public partial class MainViewModel : ObservableObject
     partial void OnSelectedThemeChanged(string value)
     {
         App.ApplyTheme(value == "Тёмная");
+        if (_settingsLoaded) _themeSetByUser = true;
         SaveSettings();
+    }
+
+    private static string DetectWindowsTheme()
+    {
+        try
+        {
+            using var key = Microsoft.Win32.Registry.CurrentUser.OpenSubKey(
+                @"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize");
+            if (key?.GetValue("AppsUseLightTheme") is int v && v == 0)
+                return "Тёмная";
+        }
+        catch { }
+        return "Светлая";
     }
 
     // --- Audio codec options ---
@@ -316,8 +332,10 @@ public partial class MainViewModel : ObservableObject
         HoldPostSeconds = s.HoldPostSeconds;
         HoldModeEnabled = s.HoldModeEnabled; // last — triggers OnHoldModeEnabledChanged
 
-        // Apply saved theme
-        SelectedTheme = s.Theme; // calls OnSelectedThemeChanged → ApplyTheme
+        // Apply theme: auto-detect from Windows on first launch, then use user's choice
+        _themeSetByUser = s.ThemeSetByUser;
+        SelectedTheme = s.ThemeSetByUser ? s.Theme : DetectWindowsTheme();
+        _settingsLoaded = true;
 
         // Apply saved language (must be after AvailableLanguages is set)
         var lang = s.Language;
@@ -347,6 +365,7 @@ public partial class MainViewModel : ObservableObject
             StartWithWindows = StartWithWindows,
             MinimizeToTray = MinimizeToTray,
             Theme = SelectedTheme,
+            ThemeSetByUser = _themeSetByUser,
             Hotkeys = HotkeyBindings.Select(h => new HotkeyBindingData
             {
                 Action = h.Action,

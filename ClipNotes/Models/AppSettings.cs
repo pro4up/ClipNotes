@@ -37,6 +37,7 @@ public class AppSettings
 
     // Theme
     public string Theme { get; set; } = "Светлая";
+    public bool ThemeSetByUser { get; set; } = false;
 
     // Custom output paths per subdirectory
     public bool UseCustomVideoPath { get; set; } = false;

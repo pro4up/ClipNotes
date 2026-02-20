@@ -6,7 +6,7 @@ namespace ClipNotes.Services;
 public static class LogService
 {
     private static readonly string LogDir = Path.Combine(
-        Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName) ?? ".", "Logs");
+        Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName) ?? ".", "logs");
 
     public static void Info(string message) => Write("INFO", message);
     public static void Warn(string message) => Write("WARN", message);

@@ -133,7 +133,7 @@
                                     <Button DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}"
                                             Content="{DynamicResource loc_BtnBrowse}"
                                             Command="{Binding LoadExistingVideoCommand}" Margin="8,0,0,0"/>
-                                    <TextBox Text="{Binding LoadedVideoPath, Mode=OneWay, FallbackValue={DynamicResource loc_VideoNotSelected}}"
+                                    <TextBox Text="{Binding LoadedVideoPath, Mode=OneWay, TargetNullValue='—'}"
                                              IsReadOnly="True"/>
                                 </DockPanel>
                                 <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelManualMarker}" Margin="0,0,0,4"/>
