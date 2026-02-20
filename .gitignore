@@ -32,8 +32,9 @@ tools/.cache/
 # Setup output directory
 ../Setup/
 
-# Offline bundle (генерируется при сборке, не хранить в репозитории)
-ClipNotes.Setup/Resources/app-bundle.zip
+# Offline bundle и временные файлы сборки (генерируются при сборке)
+ClipNotes.Setup/Resources/*.zip
+ClipNotes.Setup/Resources/whisper-cuda-temp/
 
 # App-ci (GitHub Actions artifact)
 app-ci/

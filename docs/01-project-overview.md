@@ -13,6 +13,7 @@
 E:\Claude Workstation\Projects\ClipNotes\
 ├── source\          ← git-репозиторий, исходный код
 ├── app\             ← собранное приложение (dotnet publish)
+├── Setup\           ← готовые установочники
 └── sessions\        ← выходные данные сессий (OutputDirectory в настройках)
 ```
 
@@ -20,64 +21,70 @@ E:\Claude Workstation\Projects\ClipNotes\
 
 ```
 source\
-├── build.ps1                    ← мастер-скрипт сборки (-SkipDependencies, -SkipModel, -Model, -Backend)
+├── build.ps1                    ← мастер-скрипт сборки
+├── rebuild-installers.ps1       ← быстрая пересборка установочников
 ├── ClipNotes.sln
 ├── README.md                    ← пользовательская документация
 ├── ARCHITECTURE.md              ← подробная архитектура
+├── docs\                        ← внутренняя документация (для AI-агентов)
 ├── tools\
-│   ├── download-ffmpeg.ps1      ← скачать ffmpeg в app\tools\
-│   ├── download-whisper.ps1     ← собрать/скачать whisper-cli в app\tools\ (-Backend cpu|cuda)
-│   └── download-model.ps1       ← скачать GGML-модель в app\models\
-├── installer\
-│   └── ClipNotes.iss            ← Inno Setup скрипт для создания установщика
+│   ├── download-ffmpeg.ps1
+│   ├── download-whisper.ps1     ← -Backend cpu|cuda
+│   └── download-model.ps1
 ├── resource\                    ← исходные PNG для иконок
-└── ClipNotes\                   ← C# проект
-    ├── ClipNotes.csproj
-    ├── App.xaml / App.xaml.cs   ← глобальные стили, ApplyTheme(), DWM, трей
-    ├── GlobalUsings.cs
-    ├── AssemblyInfo.cs
-    ├── Models\
-    │   ├── AppSettings.cs       ← настройки приложения (JSON), SessionHistoryEntry, HotkeyBindingData
-    │   ├── MarkerType.cs        ← enum: Bug, Task, Note
-    │   ├── Marker.cs            ← маркер (таймкод + текст + флаги генерации)
-    │   ├── SessionData.cs       ← данные текущей сессии
-    │   ├── HotkeyAction.cs      ← enum действий горячих клавиш
-    │   └── HotkeyBinding.cs     ← модель привязки клавиши в UI
-    ├── Services\
-    │   ├── ObsWebSocketService.cs    ← OBS WebSocket v5 (SHA256 auth)
-    │   ├── FFmpegService.cs          ← FFmpeg: длительность, master.wav, нарезка клипов
-    │   ├── WhisperService.cs         ← whisper-cli: транскрипция аудиоклипа
-    │   ├── ExcelService.cs           ← ClosedXML: генерация .xlsx
-    │   ├── HotkeyService.cs          ← WinAPI RegisterHotKey
-    │   ├── SessionService.cs         ← управление папками сессии, перемещение видео
-    │   ├── PipelineService.cs        ← оркестратор постобработки (7 шагов)
-    │   ├── SettingsService.cs        ← load/save settings.json
-    │   └── LogService.cs             ← логирование в AppDir/Logs/YYYY-MM-DD.log
-    ├── ViewModels\
-    │   └── MainViewModel.cs     ← единственный ViewModel (CommunityToolkit.Mvvm)
-    ├── Views\
-    │   ├── MainWindow.xaml      ← весь UI: 4 вкладки (Запись|Экспорт|История|Настройки)
-    │   └── MainWindow.xaml.cs   ← code-behind (DWM, трей, HwndSource)
-    ├── Helpers\
-    │   ├── PathHelper.cs        ← все runtime-пути приложения
-    │   └── RelayCommand.cs      ← ICommand реализация
-    └── Converters\              ← IValueConverter для XAML
-        ├── BoolToVisibilityConverter.cs
-        └── MarkerTypeToBrushConverter.cs
+├── ClipNotes\                   ← основное приложение
+│   ├── ClipNotes.csproj
+│   ├── App.xaml / App.xaml.cs   ← глобальные стили, ApplyTheme(), DWM, трей
+│   ├── Models\
+│   │   ├── AppSettings.cs       ← все настройки + SessionHistoryEntry
+│   │   ├── MarkerType.cs        ← enum: Bug, Task, Note, Summary
+│   │   ├── Marker.cs            ← таймкод + HoldDuration + флаги генерации
+│   │   ├── SessionData.cs       ← данные текущей сессии
+│   │   ├── HotkeyAction.cs      ← enum действий
+│   │   └── HotkeyBinding.cs     ← модель привязки клавиши в UI
+│   ├── Services\
+│   │   ├── ObsWebSocketService.cs    ← OBS WebSocket v5 (SHA256 auth)
+│   │   ├── FFmpegService.cs          ← длительность, master.wav, нарезка
+│   │   ├── WhisperService.cs         ← whisper-cli транскрипция
+│   │   ├── ExcelService.cs           ← ClosedXML Excel
+│   │   ├── HotkeyService.cs          ← WinAPI RegisterHotKey + SetWindowsHookEx (Hold Mode)
+│   │   ├── SessionService.cs         ← папки сессии, маркеры JSON, MoveVideo
+│   │   ├── PipelineService.cs        ← оркестратор постобработки
+│   │   ├── SettingsService.cs        ← settings.json load/save
+│   │   └── LogService.cs             ← AppDir/Logs/YYYY-MM-DD.log
+│   ├── ViewModels\
+│   │   └── MainViewModel.cs     ← единственный ViewModel (CommunityToolkit.Mvvm)
+│   ├── Views\
+│   │   ├── MainWindow.xaml      ← 4 вкладки: Запись|Экспорт|История|Настройки
+│   │   └── MainWindow.xaml.cs   ← анимация Hold, скролл настроек, hotkey TextBox
+│   ├── Helpers\
+│   │   ├── PathHelper.cs        ← runtime-пути приложения
+│   │   └── InputDialog.cs       ← простой WPF диалог ввода текста
+│   └── Converters\
+│       ├── BoolToVisibilityConverter.cs
+│       └── MarkerTypeToBrushConverter.cs
+├── ClipNotes.Setup\             ← WPF-установщик
+│   ├── Pages\                   ← Welcome/Options/Backend/Model/Summary/Progress/Finish
+│   ├── Services\InstallerService.cs
+│   ├── Loc.cs                   ← локализация установщика
+│   └── lang\en\ + lang\ru\
+└── ClipNotes.Uninstaller\       ← деинсталлятор
+    ├── Loc.cs
+    └── lang\en\ + lang\ru\
 ```
 
 ## Ключевые файлы для понимания логики
 
 | Файл | Роль |
 |------|------|
-| `PathHelper.cs` | Все пути к ffmpeg, whisper, models (через Assembly.Location) |
-| `LogService.cs` | Логирование (через Process.MainModule?.FileName, а не Assembly.Location) |
+| `PathHelper.cs` | Все пути к ffmpeg, whisper, models, lang |
+| `LogService.cs` | Логирование (через Process.MainModule?.FileName, не Assembly.Location) |
 | `MainViewModel.cs` | Вся бизнес-логика UI, команды, состояние |
 | `ObsWebSocketService.cs` | Подключение к OBS, авторизация SHA256 |
 | `FFmpegService.cs` | FFmpeg операции (длительность, master.wav, клипы) |
 | `WhisperService.cs` | whisper-cli транскрипция (принимает готовый аудиоклип) |
-| `PipelineService.cs` | Оркестратор: 7 шагов постобработки |
-| `AppSettings.cs` | Конфигурация (OBS, модель, OutputDirectory, тема, трей, история) |
+| `PipelineService.cs` | Оркестратор: шаги постобработки |
+| `AppSettings.cs` | Все настройки (OBS, модель, пути, тема, трей, история, Hold Mode) |
 
 ## OBS WebSocket (тестовый стенд)
 

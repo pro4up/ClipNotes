@@ -42,7 +42,9 @@ E:\Claude Workstation\Projects\ClipNotes\
 │   │   ├── download-ffmpeg.ps1
 │   │   ├── download-whisper.ps1   ← параметр -Backend cpu|cuda
 │   │   └── download-model.ps1
-│   ├── installer\                 ← Inno Setup скрипт (ClipNotes.iss)
+│   ├── ClipNotes.Setup\           ← WPF-установщик (7 страниц, UAC, ru/en)
+│   ├── ClipNotes.Uninstaller\     ← Деинсталлятор (самоудаление)
+│   ├── rebuild-installers.ps1     ← Быстрая пересборка установочников
 │   ├── resource\                  ← исходные PNG для иконок
 │   └── ClipNotes\                 ← C# проект
 │       ├── ClipNotes.csproj
@@ -288,8 +290,12 @@ WinAPI глобальные горячие клавиши.
 |---|---|
 | IsRecording | Идёт запись |
 | IsConnected | OBS подключён |
-| IsGenerating | Идёт постобработка |
+| IsProcessing | Идёт постобработка |
+| IsHolding | Активен Hold Mode (клавиша/кнопка зажата) |
+| HoldingType | Тип маркера для индикатора удержания |
+| HoldingTimerText | Секунды удержания (обновляется каждые 100мс) |
 | CurrentTimecode | "HH:MM:SS" для отображения |
+| MarkersCountLabel | Локализованный заголовок "Маркеры (N)" |
 | Markers | ObservableCollection<Marker> |
 | Sessions | ObservableCollection<SessionHistoryEntry> |
 
@@ -352,7 +358,33 @@ AppDir/lang/{code}/lang.json
 
 ```powershell
 .\build.ps1 [-SkipDependencies] [-SkipModel] [-Model <name>] [-Configuration <Release|Debug>]
+            [-BuildSetup] [-BuildOfflineSetup] [-BuildPortable]
 ```
+
+### `rebuild-installers.ps1` — пересборка установочников
+
+```powershell
+.\rebuild-installers.ps1              # Online Setup + Portable ZIP
+.\rebuild-installers.ps1 -Offline    # + Offline Setup (скачивает CUDA whisper)
+.\rebuild-installers.ps1 -PortableOnly
+```
+
+### ClipNotes.Setup (WPF-установщик)
+
+7 страниц: Welcome → Options → Backend → Model → Summary → Progress → Finish
+
+- Скачивает ClipNotes-portable.zip, FFmpeg, whisper-cli, модель
+- Оффлайн-режим (`OFFLINE_BUILD`): извлекает `ClipNotes-offline-bundle.zip` из Resources
+- UAC: если путь требует прав → WPF-диалог → перезапуск с `runas --direct-install`
+- Темная/светлая тема: авто через реестр `AppsUseLightTheme`
+- Регистрация в «Программах и компонентах» (Add/Remove Programs)
+- Создаёт ярлыки рабочего стола и меню «Пуск»
+
+### ClipNotes.Uninstaller
+
+- Удаляет файлы приложения и ярлыки
+- Самоудаляется: `cmd /c timeout && del uninstaller.exe && rmdir`
+- Запускается из установщика или «Программ и компонентов»
 
 **Шаги:**
 1. `download-ffmpeg.ps1` — скачать FFmpeg essentials с gyan.dev, извлечь ffmpeg.exe + ffprobe.exe
@@ -455,6 +487,13 @@ WPF не предоставляет нативного API для глобаль
 - [x] Installer (ClipNotes.Setup WPF + ClipNotes.Uninstaller)
 - [x] JSON-локализация (ru/en; пользовательские языки через lang/{code}/lang.json)
 - [x] Hold Mode (длительность клипа = время удержания горячей клавиши)
-- [x] Маркер Summary (4-й тип)
+- [x] Hold Mode визуальный индикатор (пульсирующий badge с таймером)
+- [x] Hold Mode через UI-кнопки (удержание ЛКМ)
+- [x] Маркер Summary (4-й тип, фиолетовый)
+- [x] Именование сессий (диалог ввода + авто-суффикс с форматом даты)
+- [x] Кастомные пути для video/audio/txt/table (move/copy режимы)
+- [x] Авто-очистка маркеров при загрузке видео
+- [x] Импорт маркеров из JSON-файла
+- [x] rebuild-installers.ps1 (быстрая пересборка без перекачки зависимостей)
 - [ ] Unit-тесты (не реализованы)
 - [ ] Код-подпись exe (не настроена)

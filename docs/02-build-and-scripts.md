@@ -127,12 +127,34 @@ Test-Path 'E:\Claude Workstation\Projects\ClipNotes\app\tools\whisper-cli.exe'
 Get-ChildItem 'E:\Claude Workstation\Projects\ClipNotes\app\models\ggml-*.bin'
 ```
 
-## Создание установщика
+## Сборка установочников
 
-В папке `installer\` находится `ClipNotes.iss` для Inno Setup:
-- Выбор Whisper backend: CPU или CUDA
-- Опция "Добавить в автозапуск Windows"
-- Опция "Ярлык на рабочем столе"
+### Быстрый способ (рекомендуется)
+
+```powershell
+.\rebuild-installers.ps1              # Online Setup + Portable ZIP
+.\rebuild-installers.ps1 -Offline    # + Offline Setup (~450 MB, нужен интернет для CUDA whisper)
+.\rebuild-installers.ps1 -PortableOnly
+```
+
+### Через build.ps1
+
+```powershell
+.\build.ps1 -SkipDependencies -SkipModel -BuildSetup          # Online Setup
+.\build.ps1 -SkipDependencies -SkipModel -BuildPortable        # Portable ZIP
+.\build.ps1 -SkipDependencies -SkipModel -BuildOfflineSetup    # Offline Setup (все модели + CUDA)
+```
+
+### Результат (Setup\)
+
+```
+Setup\
+├── ClipNotes-Setup.exe           ← Online installer (~10 MB)
+├── ClipNotes-Setup-Offline.exe   ← Offline installer EXE
+├── ClipNotes-offline-bundle.zip  ← Бандл с инструментами и моделями (~450 MB)
+├── ClipNotes-portable.zip        ← Portable без models/
+└── SHA256SUMS.txt
+```
 
 ## Проблемы при сборке
 
