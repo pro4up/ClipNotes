@@ -53,7 +53,6 @@ cd source
 .\build.ps1                      # Скачивает FFmpeg, whisper-cli, модель; собирает в app/
 .\build.ps1 -SkipDependencies    # Только сборка (инструменты уже есть)
 .\build.ps1 -BuildSetup          # + собрать установщик → Setup/ClipNotes-Setup.exe
-.\build.ps1 -BuildPortable       # + portable ZIP → Setup/ClipNotes-portable.zip
 ```
 
 Результат: `app/ClipNotes.exe` — готовое к запуску приложение.
