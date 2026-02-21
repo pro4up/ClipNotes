@@ -6,7 +6,6 @@
 
 ![Stars](https://img.shields.io/github/stars/pro4up/ClipNotes?style=for-the-badge) 
 ![Downloads](https://img.shields.io/github/downloads/pro4up/ClipNotes/total?style=for-the-badge) 
-![License](https://img.shields.io/github/license/pro4up/ClipNotes?style=for-the-badge)
 ![VirusTotal](https://www.virustotal.com/gui/file/371b287c593008dc2696fe0d58961f3d7e0a1b2c5752821f60243ea6bc9bbb80)
 
 ---
