@@ -35,38 +35,27 @@
 
                     <Border Grid.Row="1" Style="{StaticResource Card}">
                         <StackPanel HorizontalAlignment="Center">
+                            <TextBlock Text="{Binding RecordingStatus}" Style="{StaticResource BaseText}"
+                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                       HorizontalAlignment="Center" Margin="0,8,0,4"/>
                             <TextBlock Text="{Binding RecordingTime}"
                                        FontSize="56" FontWeight="Light" FontFamily="Segoe UI"
                                        Foreground="{DynamicResource TextPrimaryBrush}"
-                                       HorizontalAlignment="Center" Margin="0,8,0,8"/>
-                            <TextBlock Text="{Binding RecordingStatus}" Style="{StaticResource BaseText}"
-                                       Foreground="{DynamicResource TextSecondaryBrush}"
-                                       HorizontalAlignment="Center" Margin="0,0,0,12"/>
-                            <!-- Имя сессии и кнопка выровнены по общим границам группы -->
-                            <Grid HorizontalAlignment="Center">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto"/>
-                                    <RowDefinition Height="Auto"/>
-                                </Grid.RowDefinitions>
-
-                                <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,12"
-                                            Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}">
-                                    <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelSessionName}"
-                                               VerticalAlignment="Center" Margin="0,0,8,0"/>
-                                    <TextBox Text="{Binding SessionName, UpdateSourceTrigger=PropertyChanged}"
-                                             Width="200"/>
-                                </StackPanel>
-
-                                <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Left">
-                                    <Button Style="{StaticResource PrimaryButton}" Content="{DynamicResource loc_BtnStartRecording}"
-                                            Command="{Binding StartRecordingCommand}"
-                                            Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"
-                                            Margin="0,0,8,0"/>
-                                    <Button Style="{StaticResource DangerButton}" Content="{DynamicResource loc_BtnStopRecording}"
-                                            Command="{Binding StopRecordingCommand}"
-                                            Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}"/>
-                                </StackPanel>
-                            </Grid>
+                                       HorizontalAlignment="Center" Margin="0,0,0,16"/>
+                            <TextBlock Style="{StaticResource Label}" Text="{DynamicResource loc_LabelSessionName}"
+                                       HorizontalAlignment="Center" Margin="0,0,0,4"
+                                       Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+                            <TextBox Text="{Binding SessionName, UpdateSourceTrigger=PropertyChanged}"
+                                     Width="200" HorizontalAlignment="Center" Margin="0,0,0,12"
+                                     Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+                            <Button Style="{StaticResource PrimaryButton}" Content="{DynamicResource loc_BtnStartRecording}"
+                                    Command="{Binding StartRecordingCommand}"
+                                    HorizontalAlignment="Center" Margin="0,0,0,8"
+                                    Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+                            <Button Style="{StaticResource DangerButton}" Content="{DynamicResource loc_BtnStopRecording}"
+                                    Command="{Binding StopRecordingCommand}"
+                                    HorizontalAlignment="Center"
+                                    Visibility="{Binding IsRecording, Converter={StaticResource BoolToVis}}"/>
                         </StackPanel>
                     </Border>
 
