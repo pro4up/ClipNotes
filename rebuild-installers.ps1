@@ -1,14 +1,6 @@
 # rebuild-installers.ps1
-# Пересобирает установочники ClipNotes из текущего репозитория.
+# Пересобирает установщик ClipNotes из текущего репозитория.
 # Запускать из папки source\ (рядом с build.ps1).
-#
-# Использование:
-#   .\rebuild-installers.ps1              # Online Setup + bundle
-#   .\rebuild-installers.ps1 -Offline    # Online Setup + bundle + Offline Setup (~450 MB)
-#
-param(
-    [switch]$Offline       # Собрать также офлайн-установочник (требует интернет для CUDA whisper)
-)
 
 $ErrorActionPreference = "Stop"
 $scriptDir = $PSScriptRoot
@@ -21,18 +13,7 @@ Write-Host ""
 Write-Host "  Output: $scriptDir\..\Setup\" -ForegroundColor White
 Write-Host ""
 
-if ($Offline) {
-    Write-Host "Mode: Online Setup + Offline Setup" -ForegroundColor Yellow
-    Write-Host "  Note: Offline build downloads CUDA whisper (~400 MB)" -ForegroundColor DarkYellow
-    Write-Host ""
-    & "$scriptDir\build.ps1" -SkipDependencies -SkipModel -BuildSetup -BuildOfflineSetup
-}
-else {
-    Write-Host "Mode: Online Setup" -ForegroundColor Yellow
-    Write-Host "  Tip: Use -Offline to also build the offline installer" -ForegroundColor DarkGray
-    Write-Host ""
-    & "$scriptDir\build.ps1" -SkipDependencies -SkipModel -BuildSetup
-}
+& "$scriptDir\build.ps1" -SkipDependencies -SkipModel -BuildSetup
 
 Write-Host ""
 Write-Host "=====================================" -ForegroundColor Green

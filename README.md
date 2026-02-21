@@ -43,8 +43,6 @@
 
 Создаёт ярлыки на рабочем столе и в меню «Пуск», регистрирует деинсталлятор в «Программах и компонентах».
 
-> **Офлайн-версия**: `ClipNotes-Setup-Offline.exe` + `ClipNotes-offline-bundle.zip` — устанавливает без интернета (все инструменты и модели включены в bundle).
-
 ### Вариант 2 — Сборка из исходников
 
 Требования: Windows 10/11 x64, .NET 8 SDK, PowerShell 7+
@@ -55,7 +53,6 @@ cd source
 .\build.ps1                      # Скачивает FFmpeg, whisper-cli, модель; собирает в app/
 .\build.ps1 -SkipDependencies    # Только сборка (инструменты уже есть)
 .\build.ps1 -BuildSetup          # + собрать установщик → Setup/ClipNotes-Setup.exe
-.\build.ps1 -BuildOfflineSetup   # + офлайн-установщик → Setup/ClipNotes-Setup-Offline.exe
 ```
 
 Результат: `app/ClipNotes.exe` — готовое к запуску приложение.
@@ -213,8 +210,7 @@ lang/
 
 ```powershell
 cd source
-.\rebuild-installers.ps1              # Online Setup
-.\rebuild-installers.ps1 -Offline    # + Offline Setup (~450 MB)
+.\rebuild-installers.ps1
 ```
 
 ### Структура проекта
