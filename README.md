@@ -4,6 +4,10 @@
 
 ![ClipNotes Screenshot](resource/ClipNotes1.png)
 
+![Stars](https://img.shields.io{pro4up}/{ClipNotes}?style=for-the-badge) 
+![Downloads](https://img.shields.io/github/downloads/{pro4up}/{ClipNotes}/total?style=for-the-badge) 
+![License](https://img.shields.io/github/license/{pro4up}/{ClipNotes}?style=for-the-badge)
+
 ---
 
 ## Возможности
@@ -26,6 +30,9 @@
 
 ---
 
+## Скан Virus Total
+![Static Badge](https://img.shields.io/badge/https%3A%2F%2Fwww.virustotal.com%2Fgui%2Ffile%2F371b287c593008dc2696fe0d58961f3d7e0a1b2c5752821f60243ea6bc9bbb80%2Fdetection)
+
 ## Установка
 
 ### Вариант 1 — Установщик (рекомендуется)
@@ -39,14 +46,7 @@
 
 Создаёт ярлыки на рабочем столе и в меню «Пуск», регистрирует деинсталлятор в «Программах и компонентах».
 
-> **Офлайн-версия**: `ClipNotes-Setup-Offline.exe` + `ClipNotes-offline-bundle.zip` — устанавливает без интернета (все инструменты и модели включены в bundle).
-
-### Вариант 2 — Portable ZIP
-
-Распакуйте `ClipNotes-portable.zip` в любую папку.
-Добавьте модель Whisper вручную: положите `ggml-<model>.bin` в папку `models/`.
-
-### Вариант 3 — Сборка из исходников
+### Вариант 2 — Сборка из исходников
 
 Требования: Windows 10/11 x64, .NET 8 SDK, PowerShell 7+
 
