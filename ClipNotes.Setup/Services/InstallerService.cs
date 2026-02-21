@@ -215,6 +215,24 @@ public class InstallerService
                 File.Copy(f, Path.Combine(licDir, Path.GetFileName(f)), overwrite: true);
         }
 
+        // Copy lang/ directory (localization files)
+        var srcLang = Path.Combine(srcDir, "lang");
+        if (Directory.Exists(srcLang))
+        {
+            var langDest = Path.Combine(installDir, "lang");
+            foreach (var langSubDir in Directory.GetDirectories(srcLang))
+            {
+                var langCode = Path.GetFileName(langSubDir);
+                var destLangSubDir = Path.Combine(langDest, langCode);
+                Directory.CreateDirectory(destLangSubDir);
+                foreach (var f in Directory.GetFiles(langSubDir))
+                {
+                    File.Copy(f, Path.Combine(destLangSubDir, Path.GetFileName(f)), overwrite: true);
+                    Log($"  lang/{langCode}/{Path.GetFileName(f)}");
+                }
+            }
+        }
+
         ProgressChanged?.Invoke(90, "");
     }
 
@@ -256,7 +274,34 @@ public class InstallerService
         {
             await DownloadFileAsync(AppReleaseUrl, tempZip, "ClipNotes", ct);
             SetStep(Loc.T("inst_StepExtract", "ClipNotes"));
-            ZipFile.ExtractToDirectory(tempZip, installDir, overwriteFiles: true);
+
+            using var archive = ZipFile.OpenRead(tempZip);
+
+            // Detect and strip common top-level folder prefix (e.g. "ClipNotes/")
+            // The portable ZIP wraps files in a subfolder for user convenience,
+            // but the installer must extract directly into installDir.
+            var fileEntries = archive.Entries.Where(e => e.Length > 0).ToList();
+            string? prefix = null;
+            if (fileEntries.Count > 0 && fileEntries.All(e => e.FullName.Contains('/')))
+            {
+                var candidate = fileEntries[0].FullName[..(fileEntries[0].FullName.IndexOf('/') + 1)];
+                if (fileEntries.All(e => e.FullName.StartsWith(candidate, StringComparison.OrdinalIgnoreCase)))
+                    prefix = candidate;
+            }
+
+            foreach (var entry in archive.Entries)
+            {
+                if (entry.Length == 0) continue;
+                var relPath = entry.FullName;
+                if (prefix != null && relPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
+                    relPath = relPath[prefix.Length..];
+                if (string.IsNullOrWhiteSpace(relPath)) continue;
+
+                var destPath = Path.Combine(installDir, relPath.Replace('/', Path.DirectorySeparatorChar));
+                Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+                entry.ExtractToFile(destPath, overwrite: true);
+                Log($"  {relPath}");
+            }
         }
         finally
         {
@@ -342,6 +387,9 @@ public class InstallerService
                 "whisper-cuda" => _options.Backend == "cuda" ? Path.Combine(toolsDir, fileName) : null,
                 "models"       => Path.Combine(modelsDir, fileName),
                 "licenses"     => Path.Combine(licDir,    fileName),
+                "lang"         => parts.Length >= 3
+                                    ? Path.Combine(installDir, "lang", parts[1], fileName)
+                                    : null,
                 _              => null,
             };
             if (dest == null) { i++; continue; }
@@ -383,7 +431,7 @@ public class InstallerService
     {
         using var key = Registry.CurrentUser.OpenSubKey(
             @"Software\Microsoft\Windows\CurrentVersion\Run", writable: true);
-        key?.SetValue("ClipNotes", $"\"{exePath}\" --minimized");
+        key?.SetValue("ClipNotes", $"\"{exePath}\" --tray");
     }
 
     private static void RegisterUninstaller(string installDir)

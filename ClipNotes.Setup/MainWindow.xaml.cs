@@ -183,7 +183,11 @@ public partial class MainWindow : Window
             {
                 var exePath = System.IO.Path.Combine(_options.InstallPath, "ClipNotes.exe");
                 if (System.IO.File.Exists(exePath))
-                    System.Diagnostics.Process.Start(exePath);
+                    System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                    {
+                        FileName        = exePath,
+                        UseShellExecute = true,
+                    });
             }
             Application.Current.Shutdown();
             return;

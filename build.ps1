@@ -77,8 +77,7 @@ if (Test-Path $uninstallerDir) {
     dotnet publish "$uninstallerDir\ClipNotes.Uninstaller.csproj" `
         -c $Configuration `
         -r win-x64 --self-contained true `
-        -p:PublishSingleFile=true `
-        -p:EnableCompressionInSingleFile=true `
+        -p:PublishSingleFile=false `
         -o "$compileDir" --nologo
     if ($LASTEXITCODE -ne 0) { throw "Uninstaller build failed" }
 } else {
@@ -289,6 +288,15 @@ if ($BuildOfflineSetup) {
                 & $addFile $_.FullName "licenses\$($_.Name)"
             }
         }
+
+        # lang/ — локализация (lang/ru/lang.json, lang/en/lang.json, ...)
+        if (Test-Path "$compileDir\lang") {
+            $resolvedLangDir = (Resolve-Path "$compileDir\lang").Path
+            Get-ChildItem "$compileDir\lang" -Recurse -File | ForEach-Object {
+                $relPath = $_.FullName.Substring("$resolvedLangDir\".Length)
+                & $addFile $_.FullName "lang\$relPath"
+            }
+        }
     } finally {
         $zip.Dispose()
         Remove-Item $cudaTempDir -Recurse -Force -ErrorAction SilentlyContinue
@@ -349,6 +357,13 @@ if ($BuildPortable) {
         if (Test-Path "$compileDir\licenses") {
             Get-ChildItem "$compileDir\licenses" -File | ForEach-Object {
                 & $addFile $_.FullName "ClipNotes\licenses\$($_.Name)"
+            }
+        }
+        if (Test-Path "$compileDir\lang") {
+            $resolvedCompileDir = (Resolve-Path $compileDir).Path
+            Get-ChildItem "$compileDir\lang" -Recurse -File | ForEach-Object {
+                $relPath = $_.FullName.Substring("$resolvedCompileDir\".Length)
+                & $addFile $_.FullName "ClipNotes\$relPath"
             }
         }
     } finally {
