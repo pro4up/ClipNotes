@@ -60,7 +60,7 @@
             <!-- ══ CheckBox ══════════════════════════════════════════════════ -->
             <Style x:Key="{x:Type CheckBox}" TargetType="CheckBox">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
-                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontSize" Value="14"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -175,7 +175,7 @@
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Padding" Value="14,8"/>
-                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontSize" Value="14"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Template">
                     <Setter.Value>
@@ -241,7 +241,7 @@
                 <Setter Property="BorderBrush" Value="{DynamicResource CardBorderBrush}"/>
                 <Setter Property="BorderThickness" Value="1"/>
                 <Setter Property="Padding" Value="10,8"/>
-                <Setter Property="FontSize" Value="13"/>
+                <Setter Property="FontSize" Value="14"/>
                 <Setter Property="VerticalContentAlignment" Value="Center"/>
                 <Setter Property="Template">
                     <Setter.Value>

@@ -7,8 +7,7 @@ param(
     [string]$Configuration = "Release",
     [string]$Backend = "cpu",           # cpu | cuda  (whisper backend)
     [switch]$BuildSetup,                # Собрать Online Setup (~10 MB)
-    [switch]$BuildOfflineSetup,         # Собрать Offline Setup (~450 MB, включает bundle)
-    [switch]$BuildPortable              # Собрать Portable ZIP (без models/)
+    [switch]$BuildOfflineSetup          # Собрать Offline Setup (~450 MB, включает bundle)
 )
 
 $ErrorActionPreference = "Stop"
@@ -191,6 +190,42 @@ if ($BuildSetup) {
 
     if (-not (Test-Path $setupOutputDir)) { New-Item -ItemType Directory -Path $setupOutputDir -Force | Out-Null }
 
+    # Создать ClipNotes-bundle.zip — архив приложения для загрузки online-установщиком
+    $bundleZip = "$setupOutputDir\ClipNotes-bundle.zip"
+    if (Test-Path $bundleZip) { Remove-Item $bundleZip }
+    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    $zip = [System.IO.Compression.ZipFile]::Open($bundleZip, 'Create')
+    try {
+        $addFile = {
+            param($srcPath, $entryName)
+            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $srcPath, $entryName, [System.IO.Compression.CompressionLevel]::Fastest) | Out-Null
+        }
+        Get-ChildItem "$compileDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
+            & $addFile $_.FullName "ClipNotes\$($_.Name)"
+        }
+        if (Test-Path "$compileDir\tools") {
+            Get-ChildItem "$compileDir\tools" -File | ForEach-Object {
+                & $addFile $_.FullName "ClipNotes\tools\$($_.Name)"
+            }
+        }
+        if (Test-Path "$compileDir\licenses") {
+            Get-ChildItem "$compileDir\licenses" -File | ForEach-Object {
+                & $addFile $_.FullName "ClipNotes\licenses\$($_.Name)"
+            }
+        }
+        if (Test-Path "$compileDir\lang") {
+            $resolvedCompileDir = (Resolve-Path $compileDir).Path
+            Get-ChildItem "$compileDir\lang" -Recurse -File | ForEach-Object {
+                $relPath = $_.FullName.Substring("$resolvedCompileDir\".Length)
+                & $addFile $_.FullName "ClipNotes\$relPath"
+            }
+        }
+    } finally {
+        $zip.Dispose()
+    }
+    $bundleSize = [math]::Round((Get-Item $bundleZip).Length / 1MB, 1)
+    Write-Host "[OK] ClipNotes-bundle.zip ($bundleSize MB)" -ForegroundColor Green
+
     dotnet publish "$setupSourceDir\ClipNotes.Setup.csproj" `
         -c Release -r win-x64 --self-contained false `
         -p:PublishSingleFile=true `
@@ -327,55 +362,8 @@ if ($BuildOfflineSetup) {
     Write-Host "[OK] ClipNotes-Setup-Offline.exe + ClipNotes-offline-bundle.zip" -ForegroundColor Green
 }
 
-# ── Portable ZIP ───────────────────────────────────────────────────────────────
-if ($BuildPortable) {
-    Write-Host ""
-    Write-Host "  Creating Portable ZIP..." -ForegroundColor Yellow
-
-    if (-not (Test-Path $setupOutputDir)) { New-Item -ItemType Directory -Path $setupOutputDir -Force | Out-Null }
-
-    $portableZip = "$setupOutputDir\ClipNotes-portable.zip"
-    if (Test-Path $portableZip) { Remove-Item $portableZip }
-
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
-    $zip = [System.IO.Compression.ZipFile]::Open($portableZip, 'Create')
-    try {
-        $addFile = {
-            param($srcPath, $entryName)
-            [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $srcPath, $entryName, [System.IO.Compression.CompressionLevel]::Fastest) | Out-Null
-        }
-
-        # Корень (exe, dll, json) — без models/
-        Get-ChildItem "$compileDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
-            & $addFile $_.FullName "ClipNotes\$($_.Name)"
-        }
-        if (Test-Path "$compileDir\tools") {
-            Get-ChildItem "$compileDir\tools" -File | ForEach-Object {
-                & $addFile $_.FullName "ClipNotes\tools\$($_.Name)"
-            }
-        }
-        if (Test-Path "$compileDir\licenses") {
-            Get-ChildItem "$compileDir\licenses" -File | ForEach-Object {
-                & $addFile $_.FullName "ClipNotes\licenses\$($_.Name)"
-            }
-        }
-        if (Test-Path "$compileDir\lang") {
-            $resolvedCompileDir = (Resolve-Path $compileDir).Path
-            Get-ChildItem "$compileDir\lang" -Recurse -File | ForEach-Object {
-                $relPath = $_.FullName.Substring("$resolvedCompileDir\".Length)
-                & $addFile $_.FullName "ClipNotes\$relPath"
-            }
-        }
-    } finally {
-        $zip.Dispose()
-    }
-
-    $portableSize = [math]::Round((Get-Item $portableZip).Length / 1MB, 1)
-    Write-Host "[OK] ClipNotes-portable.zip ($portableSize MB)" -ForegroundColor Green
-}
-
 # ── SHA256 ─────────────────────────────────────────────────────────────────────
-if (($BuildSetup -or $BuildOfflineSetup -or $BuildPortable) -and (Test-Path $setupOutputDir)) {
+if (($BuildSetup -or $BuildOfflineSetup) -and (Test-Path $setupOutputDir)) {
     $shaFile = "$setupOutputDir\SHA256SUMS.txt"
     if (Test-Path $shaFile) { Remove-Item $shaFile }
     Get-ChildItem $setupOutputDir -File -Filter "*.exe" | ForEach-Object {

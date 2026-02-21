@@ -17,7 +17,7 @@ public class InstallerService
     public event Action<string>? LogMessage;
 
     public const string AppReleaseUrl =
-        "https://github.com/pro4up/ClipNotes/releases/latest/download/ClipNotes-portable.zip";
+        "https://github.com/pro4up/ClipNotes/releases/latest/download/ClipNotes-bundle.zip";
     private const string FfmpegUrl =
         "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip";
     private const string WhisperCpuUrl =
@@ -278,8 +278,8 @@ public class InstallerService
             using var archive = ZipFile.OpenRead(tempZip);
 
             // Detect and strip common top-level folder prefix (e.g. "ClipNotes/")
-            // The portable ZIP wraps files in a subfolder for user convenience,
-            // but the installer must extract directly into installDir.
+            // The bundle ZIP may wrap files in a subfolder;
+            // the installer must extract directly into installDir.
             var fileEntries = archive.Entries.Where(e => e.Length > 0).ToList();
             string? prefix = null;
             if (fileEntries.Count > 0 && fileEntries.All(e => e.FullName.Contains('/')))

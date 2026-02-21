@@ -12,10 +12,10 @@
         <!-- Заголовок -->
         <StackPanel Grid.Row="0">
             <TextBlock x:Name="PageTitle"
-                       FontSize="20" FontWeight="SemiBold"
+                       FontSize="22" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock x:Name="PageSubtitle"
-                       FontSize="13"
+                       FontSize="14"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        Margin="0,4,0,0"/>
         </StackPanel>
@@ -57,7 +57,7 @@
                         BorderThickness="1" CornerRadius="10" Padding="14,10">
                     <StackPanel>
                         <TextBlock x:Name="BackendLabelText"
-                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,3"/>
                         <TextBlock x:Name="BackendText"
                                    FontSize="13" FontWeight="SemiBold"
@@ -71,13 +71,13 @@
                         BorderThickness="1" CornerRadius="10" Padding="14,10">
                     <StackPanel>
                         <TextBlock x:Name="ModelLabelText"
-                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,3"/>
                         <TextBlock x:Name="ModelText"
                                    FontSize="13" FontWeight="SemiBold"
                                    Foreground="{DynamicResource TextPrimaryBrush}"/>
                         <TextBlock x:Name="ModelSizeText"
-                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,2,0,0"/>
                     </StackPanel>
                 </Border>
@@ -90,7 +90,7 @@
                     Padding="14,10" Margin="0,0,0,8">
                 <StackPanel>
                     <TextBlock x:Name="ExtrasLabelText"
-                               FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                               FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
                                Margin="0,0,0,3"/>
                     <TextBlock x:Name="ExtrasText"
                                FontSize="12" Foreground="{DynamicResource TextPrimaryBrush}"/>
@@ -109,10 +109,10 @@
                     </Grid.ColumnDefinitions>
                     <StackPanel>
                         <TextBlock x:Name="DiskSizeLabelText"
-                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"
                                    Margin="0,0,0,3"/>
                         <TextBlock x:Name="DiskBreakdownText"
-                                   FontSize="11" Foreground="{DynamicResource TextSecondaryBrush}"/>
+                                   FontSize="12" Foreground="{DynamicResource TextSecondaryBrush}"/>
                     </StackPanel>
                     <TextBlock x:Name="TotalSizeText" Grid.Column="1"
                                FontSize="18" FontWeight="SemiBold"

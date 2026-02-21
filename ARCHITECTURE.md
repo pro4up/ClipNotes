@@ -358,22 +358,21 @@ AppDir/lang/{code}/lang.json
 
 ```powershell
 .\build.ps1 [-SkipDependencies] [-SkipModel] [-Model <name>] [-Configuration <Release|Debug>]
-            [-BuildSetup] [-BuildOfflineSetup] [-BuildPortable]
+            [-BuildSetup] [-BuildOfflineSetup]
 ```
 
 ### `rebuild-installers.ps1` — пересборка установочников
 
 ```powershell
-.\rebuild-installers.ps1              # Online Setup + Portable ZIP
+.\rebuild-installers.ps1              # Online Setup
 .\rebuild-installers.ps1 -Offline    # + Offline Setup (скачивает CUDA whisper)
-.\rebuild-installers.ps1 -PortableOnly
 ```
 
 ### ClipNotes.Setup (WPF-установщик)
 
 7 страниц: Welcome → Options → Backend → Model → Summary → Progress → Finish
 
-- Скачивает ClipNotes-portable.zip, FFmpeg, whisper-cli, модель
+- Скачивает ClipNotes-bundle.zip, FFmpeg, whisper-cli, модель
 - Оффлайн-режим (`OFFLINE_BUILD`): извлекает `ClipNotes-offline-bundle.zip` из Resources
 - UAC: если путь требует прав → WPF-диалог → перезапуск с `runas --direct-install`
 - Темная/светлая тема: авто через реестр `AppsUseLightTheme`

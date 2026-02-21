@@ -14,10 +14,10 @@
         <!-- Заголовок -->
         <StackPanel Grid.Row="0">
             <TextBlock x:Name="PageTitle"
-                       FontSize="20" FontWeight="SemiBold"
+                       FontSize="22" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock x:Name="PageSubtitle"
-                       FontSize="13"
+                       FontSize="14"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        Margin="0,4,0,0"/>
         </StackPanel>
@@ -33,7 +33,7 @@
                 CornerRadius="8"
                 Padding="12,8">
             <TextBlock x:Name="NoteText"
-                       FontSize="11"
+                       FontSize="12"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        TextWrapping="Wrap"/>
         </Border>

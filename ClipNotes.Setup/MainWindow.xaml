@@ -2,9 +2,9 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="ClipNotes Setup"
-        Width="560" Height="600"
-        MinWidth="560" MinHeight="600"
-        MaxWidth="560" MaxHeight="600"
+        Width="640" Height="680"
+        MinWidth="640" MinHeight="680"
+        MaxWidth="640" MaxHeight="680"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterScreen"
         Icon="pack://application:,,,/Resources/icon.ico"
@@ -13,7 +13,7 @@
         <Grid.RowDefinitions>
             <RowDefinition Height="*"/>   <!-- Контент страниц -->
             <RowDefinition Height="Auto"/> <!-- Индикатор шагов -->
-            <RowDefinition Height="64"/>  <!-- Навигация -->
+            <RowDefinition Height="72"/>  <!-- Навигация -->
         </Grid.RowDefinitions>
 
         <!-- Контентная область -->

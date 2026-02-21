@@ -3,13 +3,11 @@
 # Запускать из папки source\ (рядом с build.ps1).
 #
 # Использование:
-#   .\rebuild-installers.ps1              # Online + Portable
-#   .\rebuild-installers.ps1 -Offline    # Online + Portable + Offline (~450 MB)
-#   .\rebuild-installers.ps1 -PortableOnly
+#   .\rebuild-installers.ps1              # Online Setup + bundle
+#   .\rebuild-installers.ps1 -Offline    # Online Setup + bundle + Offline Setup (~450 MB)
 #
 param(
-    [switch]$Offline,      # Собрать также офлайн-установочник (требует интернет для CUDA whisper)
-    [switch]$PortableOnly  # Собрать только portable ZIP
+    [switch]$Offline       # Собрать также офлайн-установочник (требует интернет для CUDA whisper)
 )
 
 $ErrorActionPreference = "Stop"
@@ -23,21 +21,17 @@ Write-Host ""
 Write-Host "  Output: $scriptDir\..\Setup\" -ForegroundColor White
 Write-Host ""
 
-if ($PortableOnly) {
-    Write-Host "Mode: Portable ZIP only" -ForegroundColor Yellow
-    & "$scriptDir\build.ps1" -SkipDependencies -SkipModel -BuildPortable
-}
-elseif ($Offline) {
-    Write-Host "Mode: Online Setup + Portable + Offline Setup" -ForegroundColor Yellow
+if ($Offline) {
+    Write-Host "Mode: Online Setup + Offline Setup" -ForegroundColor Yellow
     Write-Host "  Note: Offline build downloads CUDA whisper (~400 MB)" -ForegroundColor DarkYellow
     Write-Host ""
-    & "$scriptDir\build.ps1" -SkipDependencies -SkipModel -BuildSetup -BuildPortable -BuildOfflineSetup
+    & "$scriptDir\build.ps1" -SkipDependencies -SkipModel -BuildSetup -BuildOfflineSetup
 }
 else {
-    Write-Host "Mode: Online Setup + Portable ZIP" -ForegroundColor Yellow
+    Write-Host "Mode: Online Setup" -ForegroundColor Yellow
     Write-Host "  Tip: Use -Offline to also build the offline installer" -ForegroundColor DarkGray
     Write-Host ""
-    & "$scriptDir\build.ps1" -SkipDependencies -SkipModel -BuildSetup -BuildPortable
+    & "$scriptDir\build.ps1" -SkipDependencies -SkipModel -BuildSetup
 }
 
 Write-Host ""

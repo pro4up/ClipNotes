@@ -12,10 +12,10 @@
         <!-- Заголовок -->
         <StackPanel Grid.Row="0">
             <TextBlock x:Name="PageTitle"
-                       FontSize="20" FontWeight="SemiBold"
+                       FontSize="22" FontWeight="SemiBold"
                        Foreground="{DynamicResource TextPrimaryBrush}"/>
             <TextBlock x:Name="PageSubtitle"
-                       FontSize="13"
+                       FontSize="14"
                        Foreground="{DynamicResource TextSecondaryBrush}"
                        Margin="0,4,0,0"/>
         </StackPanel>
@@ -35,21 +35,21 @@
                     VerticalAlignment="Stretch">
                 <StackPanel>
                     <TextBlock Text="CPU"
-                               FontSize="16" FontWeight="Bold"
+                               FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <TextBlock Text="OpenBLAS"
-                               FontSize="12"
+                               FontSize="13"
                                Foreground="{DynamicResource AccentBrush}"
                                Margin="0,2,0,12"/>
                     <TextBlock x:Name="CpuDescText"
-                               TextWrapping="Wrap" FontSize="12"
+                               TextWrapping="Wrap" FontSize="13"
                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                     <Border Margin="0,14,0,0"
                             Background="#1A8A3A"
                             CornerRadius="6"
                             Padding="8,4">
                         <TextBlock x:Name="CpuRecommendedText"
-                                   FontSize="11" FontWeight="SemiBold"
+                                   FontSize="13" FontWeight="SemiBold"
                                    Foreground="White"
                                    HorizontalAlignment="Center"/>
                     </Border>
@@ -63,15 +63,15 @@
                     VerticalAlignment="Stretch">
                 <StackPanel>
                     <TextBlock Text="GPU"
-                               FontSize="16" FontWeight="Bold"
+                               FontSize="18" FontWeight="Bold"
                                Foreground="{DynamicResource TextPrimaryBrush}"/>
                     <TextBlock x:Name="CudaSubtitle"
                                Text="NVIDIA CUDA"
-                               FontSize="12"
+                               FontSize="13"
                                Foreground="{DynamicResource AccentBrush}"
                                Margin="0,2,0,12"/>
                     <TextBlock x:Name="CudaDescText"
-                               TextWrapping="Wrap" FontSize="12"
+                               TextWrapping="Wrap" FontSize="13"
                                Foreground="{DynamicResource TextSecondaryBrush}"/>
                 </StackPanel>
             </Button>
