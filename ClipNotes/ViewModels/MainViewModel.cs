@@ -216,12 +216,7 @@ public partial class MainViewModel : ObservableObject
 
         Markers.CollectionChanged += (_, _) => OnPropertyChanged(nameof(MarkersCountLabel));
 
-        // Load today's existing log file into buffer, then subscribe to new entries
-        var todayLog = Path.Combine(LogSvc.LogDir, $"{DateTime.Now:yyyy-MM-dd}.log");
-        if (File.Exists(todayLog))
-        {
-            try { _logText = File.ReadAllText(todayLog).TrimEnd(); } catch { }
-        }
+        // Subscribe to new log entries; today's log file is loaded later via InitializeLogs()
         LogSvc.LogEntryAdded += OnLogEntryAdded;
 
         AvailableLanguages = Loc.GetAvailableLanguages();
@@ -1194,10 +1189,18 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
-    private void OnLogEntryAdded(string line)
+    /// <summary>Called from Window_Loaded — loads today's log file off the constructor hot-path.</summary>
+    public void InitializeLogs()
     {
-        Application.Current?.Dispatcher.Invoke(() =>
-            LogText = string.IsNullOrEmpty(LogText) ? line : LogText + "\n" + line);
+        var todayLog = Path.Combine(LogSvc.LogDir, $"{DateTime.Now:yyyy-MM-dd}.log");
+        if (!File.Exists(todayLog)) return;
+        try { LogText = File.ReadAllText(todayLog).TrimEnd(); } catch { }
+    }
+
+    private void OnLogEntryAdded(string _)
+    {
+        // Use the pre-built StringBuilder buffer — avoids O(n²) string concatenation
+        Application.Current?.Dispatcher.Invoke(() => LogText = LogSvc.GetBufferedText());
     }
 
     [RelayCommand]

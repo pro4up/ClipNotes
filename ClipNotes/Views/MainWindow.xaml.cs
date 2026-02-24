@@ -26,6 +26,7 @@ public partial class MainWindow : Window
         SetupHoldAnimation();
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         SyncDatePresetCombo();
+        ViewModel.InitializeLogs();
     }
 
     /// <summary>Syncs the preset ComboBox selection to match the currently loaded DateSuffixFormat.</summary>

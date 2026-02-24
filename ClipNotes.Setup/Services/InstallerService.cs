@@ -313,6 +313,10 @@ public class InstallerService
                     prefix = candidate;
             }
 
+            // Canonical base path for traversal guard (with trailing separator)
+            var canonBase = Path.GetFullPath(installDir).TrimEnd(Path.DirectorySeparatorChar)
+                            + Path.DirectorySeparatorChar;
+
             foreach (var (entry, normalizedName) in fileEntries)
             {
                 var relPath = normalizedName;
@@ -320,7 +324,16 @@ public class InstallerService
                     relPath = relPath[prefix.Length..];
                 if (string.IsNullOrWhiteSpace(relPath)) continue;
 
-                var destPath = Path.Combine(installDir, relPath.Replace('/', Path.DirectorySeparatorChar));
+                var destPath = Path.GetFullPath(
+                    Path.Combine(installDir, relPath.Replace('/', Path.DirectorySeparatorChar)));
+
+                // Guard against path traversal (e.g. "../../Windows/evil.exe" in crafted ZIP)
+                if (!destPath.StartsWith(canonBase, StringComparison.OrdinalIgnoreCase))
+                {
+                    Log($"  [BLOCKED] path traversal: {relPath}");
+                    continue;
+                }
+
                 Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
                 entry.ExtractToFile(destPath, overwrite: true);
                 Log($"  {relPath}");
@@ -391,6 +404,9 @@ public class InstallerService
         Directory.CreateDirectory(modelsDir);
         Directory.CreateDirectory(licDir);
 
+        var canonBase = Path.GetFullPath(installDir).TrimEnd(Path.DirectorySeparatorChar)
+                        + Path.DirectorySeparatorChar;
+
         using var archive = ZipFile.OpenRead(bundlePath);
         int count = archive.Entries.Count(e => e.Length > 0);
         int i = 0;
@@ -420,6 +436,14 @@ public class InstallerService
                 _              => null,
             };
             if (dest == null) { i++; continue; }
+
+            // Guard against path traversal in embedded bundle
+            var canonDest = Path.GetFullPath(dest);
+            if (!canonDest.StartsWith(canonBase, StringComparison.OrdinalIgnoreCase))
+            {
+                Log($"  [BLOCKED] path traversal: {normalizedName}");
+                i++; continue;
+            }
 
             Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
             entry.ExtractToFile(dest, overwrite: true);
