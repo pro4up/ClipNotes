@@ -1,4 +1,5 @@
 using System.IO;
+using System.Windows;
 using ClipNotes.Models;
 
 namespace ClipNotes.Services;
@@ -8,15 +9,17 @@ public class PipelineService
     private readonly FFmpegService _ffmpeg;
     private readonly WhisperService _whisper;
     private readonly ExcelService _excel;
+    private readonly SessionService _sessionService;
 
     public event Action<string>? StatusChanged;
     public event Action<int, int>? ProgressChanged;
 
-    public PipelineService(FFmpegService ffmpeg, WhisperService whisper, ExcelService excel)
+    public PipelineService(FFmpegService ffmpeg, WhisperService whisper, ExcelService excel, SessionService sessionService)
     {
         _ffmpeg = ffmpeg;
         _whisper = whisper;
         _excel = excel;
+        _sessionService = sessionService;
     }
 
     private record MarkerWork(
@@ -132,6 +135,8 @@ public class PipelineService
                 }
             });
 
+        var dispatcher = Application.Current?.Dispatcher;
+
         // 4. Phase 2: Transcribe sequentially (Whisper/GPU can't be shared across processes)
         for (int i = 0; i < works.Count; i++)
         {
@@ -146,9 +151,11 @@ public class PipelineService
             {
                 // Store relative path if audioDir is inside sessionFolder, else absolute
                 var defaultAudioDir = Path.Combine(session.SessionFolder, "audio");
-                marker.AudioFilePath = audioDir == defaultAudioDir
+                var audioFilePath = audioDir == defaultAudioDir
                     ? Path.Combine("audio", work.BaseName + work.Ext)
                     : work.FinalClipPath;
+                // Marker is an ObservableObject — mutate only on UI thread to avoid cross-thread PropertyChanged
+                dispatcher?.Invoke(() => marker.AudioFilePath = audioFilePath);
             }
 
             if (marker.GenerateText)
@@ -161,11 +168,19 @@ public class PipelineService
 
                 var text = await _whisper.TranscribeSegmentAsync(
                     transcribePath, txtBasePath, settings.TranscriptionLanguage, glossary, ct);
-                marker.Text = text.Trim();
+
                 var defaultTxtDir = Path.Combine(session.SessionFolder, "txt");
-                marker.TextFilePath = txtDir == defaultTxtDir
+                var markerText = text.Trim();
+                var markerTextFilePath = txtDir == defaultTxtDir
                     ? Path.Combine("txt", work.BaseName + ".txt")
                     : Path.Combine(txtDir, work.BaseName + ".txt");
+
+                // Marshal to UI thread before mutating ObservableObject properties
+                dispatcher?.Invoke(() =>
+                {
+                    marker.Text = markerText;
+                    marker.TextFilePath = markerTextFilePath;
+                });
 
                 // Cleanup temp files
                 if (work.TranscribeWavPath != null && File.Exists(work.TranscribeWavPath))
@@ -186,7 +201,7 @@ public class PipelineService
 
         // 6. Save meta
         StatusChanged?.Invoke("Сохранение метаданных сессии...");
-        new SessionService().SaveSessionMeta(session);
+        _sessionService.SaveSessionMeta(session);
 
         ProgressChanged?.Invoke(works.Count, works.Count);
         StatusChanged?.Invoke("Готово!");

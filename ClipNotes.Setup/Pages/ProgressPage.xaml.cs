@@ -67,9 +67,10 @@ public partial class ProgressPage : UserControl
             mw.UnlockAfterError();
     }
 
-    private void AppendLog(string message)
+    private void AppendLog(string? message)
     {
-        LogText.Text += message + "\n";
+        if (message == null) return;
+        LogText.AppendText(message + "\n"); // AppendText avoids O(n²) string allocation
         LogScroll.ScrollToBottom();
     }
 }

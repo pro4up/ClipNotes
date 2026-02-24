@@ -141,7 +141,24 @@ public partial class MainWindow : Window
 
     private void LogTextBox_TextChanged(object sender, TextChangedEventArgs e)
     {
-        if (sender is TextBox tb) tb.ScrollToEnd();
+        if (sender is not TextBox tb) return;
+        // Auto-scroll only when already at (or near) the bottom — preserves manual scroll position
+        var sv = FindVisualChild<ScrollViewer>(tb);
+        if (sv == null || sv.ScrollableHeight <= 0 ||
+            sv.ScrollableHeight - sv.VerticalOffset < sv.ViewportHeight + 5.0)
+            tb.ScrollToEnd();
+    }
+
+    private static T? FindVisualChild<T>(DependencyObject obj) where T : DependencyObject
+    {
+        for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+        {
+            var child = VisualTreeHelper.GetChild(obj, i);
+            if (child is T target) return target;
+            var found = FindVisualChild<T>(child);
+            if (found != null) return found;
+        }
+        return null;
     }
 
     private void HotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)

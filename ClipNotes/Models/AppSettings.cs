@@ -36,7 +36,7 @@ public class AppSettings
     public bool MinimizeToTray { get; set; } = false;
 
     // Theme
-    public string Theme { get; set; } = "Светлая";
+    public string Theme { get; set; } = "Light";
     public bool ThemeSetByUser { get; set; } = false;
 
     // Custom output paths per subdirectory

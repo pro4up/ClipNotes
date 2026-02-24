@@ -6,7 +6,7 @@ public class AsyncRelayCommand : ICommand
 {
     private readonly Func<Task> _execute;
     private readonly Func<bool>? _canExecute;
-    private bool _isExecuting;
+    private volatile bool _isExecuting;
 
     public AsyncRelayCommand(Func<Task> execute, Func<bool>? canExecute = null)
     {

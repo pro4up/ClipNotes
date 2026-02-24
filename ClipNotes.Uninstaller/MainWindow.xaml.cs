@@ -113,8 +113,9 @@ public partial class MainWindow : Window
             Process.Start(new ProcessStartInfo
             {
                 FileName       = cmdExe,
+                // Escape any embedded double-quotes in the path to prevent cmd.exe argument breaking
                 Arguments      = $"/c timeout /t 4 /nobreak > nul " +
-                                 $"& rmdir /s /q \"{installDir}\"",
+                                 $"& rmdir /s /q \"{installDir.Replace("\"", "\"\"")}\"",
                 WindowStyle    = ProcessWindowStyle.Hidden,
                 UseShellExecute = true,
             });

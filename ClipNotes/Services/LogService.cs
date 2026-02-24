@@ -47,7 +47,7 @@ public static class LogService
                 fileSb.Append($"\n  {ex.StackTrace.Replace("\n", "\n  ")}");
             File.AppendAllText(logFile, fileSb.ToString() + "\n");
         }
-        catch { }
+        catch (Exception) { } // Can't log a logging failure — swallow silently
 
         // Append to in-memory buffer for UI display
         lock (_bufferLock)
@@ -64,6 +64,6 @@ public static class LogService
             }
         }
 
-        try { LogEntryAdded?.Invoke(line); } catch { }
+        try { LogEntryAdded?.Invoke(line); } catch (Exception) { } // Prevent subscriber exceptions from crashing logger
     }
 }

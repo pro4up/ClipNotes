@@ -25,7 +25,10 @@ public class SettingsService
                 return JsonSerializer.Deserialize<AppSettings>(json, JsonOptions) ?? new AppSettings();
             }
         }
-        catch { }
+        catch (Exception ex)
+        {
+            LogService.Warn($"Failed to load settings: {ex.Message}");
+        }
         return new AppSettings();
     }
 
@@ -34,6 +37,9 @@ public class SettingsService
         var dir = Path.GetDirectoryName(SettingsPath)!;
         Directory.CreateDirectory(dir);
         var json = JsonSerializer.Serialize(settings, JsonOptions);
-        File.WriteAllText(SettingsPath, json);
+        // Write to temp file first, then atomically replace — prevents partial-write corruption on crash
+        var tmp = SettingsPath + ".tmp";
+        File.WriteAllText(tmp, json);
+        File.Move(tmp, SettingsPath, overwrite: true);
     }
 }

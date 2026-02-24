@@ -12,6 +12,8 @@ public class InstallerService
     private readonly InstallOptions _options;
     private readonly DownloadService _download = new();
 
+    private const string AppVersion = "1.0.0";
+
     public event Action<string>? StepChanged;
     public event Action<double, string>? ProgressChanged;
     public event Action<string>? LogMessage;
@@ -160,17 +162,17 @@ public class InstallerService
                 obj = new JsonObject();
             }
 
-            obj["Language"]        = _options.Language;
-            obj["WhisperModel"]    = _options.Model;
+            obj["Language"]         = _options.Language;
+            obj["WhisperModel"]     = _options.Model;
             obj["StartWithWindows"] = _options.RunOnStartup;
             File.WriteAllText(settingsPath, obj.ToJsonString());
         }
-        catch { }
+        catch (Exception ex) { Log($"SaveSettings error: {ex.Message}"); }
     }
 
     // ── Локальный источник ──────────────────────────────────────────────────
 
-    private static string? GetLocalSourceDir()
+    private string? GetLocalSourceDir()
     {
         try
         {
@@ -179,53 +181,25 @@ public class InstallerService
             var setupDir = Path.GetDirectoryName(exePath);
             if (setupDir == null) return null;
             // Build root is at setupDir/../app; app files are in setupDir/../app/app/
-            var buildRoot  = Path.GetFullPath(Path.Combine(setupDir, "..", "app"));
-            var appSubDir  = Path.Combine(buildRoot, "app");
+            var buildRoot = Path.GetFullPath(Path.Combine(setupDir, "..", "app"));
+            var appSubDir = Path.Combine(buildRoot, "app");
             return Directory.Exists(appSubDir)
                    && File.Exists(Path.Combine(appSubDir, "ClipNotes.exe"))
                 ? appSubDir : null;
         }
-        catch { return null; }
+        catch (Exception ex) { Log($"GetLocalSourceDir error: {ex.Message}"); return null; }
     }
 
     private async Task CopyAppFilesAsync(
         string srcAppDir, string destAppDir, string destRootDir, CancellationToken ct)
     {
-        // Copy exe/dll/json app files → destAppDir (installDir/app)
-        var rootFiles = Directory.GetFiles(srcAppDir);
-        for (int i = 0; i < rootFiles.Length; i++)
-        {
-            ct.ThrowIfCancellationRequested();
-            var src  = rootFiles[i];
-            var name = Path.GetFileName(src);
-            File.Copy(src, Path.Combine(destAppDir, name), overwrite: true);
-            Log($"  app/{name}");
-            ProgressChanged?.Invoke((double)(i + 1) / rootFiles.Length * 40,
-                $"{i + 1}/{rootFiles.Length}: {name}");
-            await Task.Yield();
-        }
+        var srcRoot = Path.GetFullPath(Path.Combine(srcAppDir, ".."));
 
-        // tools/ lives one level up in the build output (srcAppDir/../tools)
-        var srcTools = Path.GetFullPath(Path.Combine(srcAppDir, "..", "tools"));
-        var destToolsDir = Path.Combine(destRootDir, "tools");
-        Directory.CreateDirectory(destToolsDir);
-        if (Directory.Exists(srcTools))
-        {
-            var toolFiles = Directory.GetFiles(srcTools);
-            for (int i = 0; i < toolFiles.Length; i++)
-            {
-                ct.ThrowIfCancellationRequested();
-                var name = Path.GetFileName(toolFiles[i]);
-                File.Copy(toolFiles[i], Path.Combine(destToolsDir, name), overwrite: true);
-                Log($"  tools/{name}");
-                ProgressChanged?.Invoke(40 + (double)(i + 1) / toolFiles.Length * 35,
-                    $"tools/{name}");
-                await Task.Yield();
-            }
-        }
+        await CopyFlatFilesAsync(srcAppDir, destAppDir, "app", 0, 40, ct);
+        await CopyFlatFilesAsync(
+            Path.Combine(srcRoot, "tools"), Path.Combine(destRootDir, "tools"), "tools", 40, 35, ct);
 
-        // licenses/ lives one level up
-        var srcLicenses = Path.GetFullPath(Path.Combine(srcAppDir, "..", "licenses"));
+        var srcLicenses = Path.Combine(srcRoot, "licenses");
         if (Directory.Exists(srcLicenses))
         {
             var licDir = Path.Combine(destRootDir, "licenses");
@@ -234,25 +208,45 @@ public class InstallerService
                 File.Copy(f, Path.Combine(licDir, Path.GetFileName(f)), overwrite: true);
         }
 
-        // lang/ lives one level up
-        var srcLang = Path.GetFullPath(Path.Combine(srcAppDir, "..", "lang"));
-        if (Directory.Exists(srcLang))
+        CopyLangDir(Path.Combine(srcRoot, "lang"), Path.Combine(destRootDir, "lang"));
+        ProgressChanged?.Invoke(90, "");
+    }
+
+    private async Task CopyFlatFilesAsync(
+        string srcDir, string destDir, string logLabel,
+        double progressStart, double progressRange, CancellationToken ct)
+    {
+        if (!Directory.Exists(srcDir)) return;
+        Directory.CreateDirectory(destDir);
+        var files = Directory.GetFiles(srcDir);
+        for (int i = 0; i < files.Length; i++)
         {
-            var langDest = Path.Combine(destRootDir, "lang");
-            foreach (var langSubDir in Directory.GetDirectories(srcLang))
+            ct.ThrowIfCancellationRequested();
+            var name = Path.GetFileName(files[i]);
+            File.Copy(files[i], Path.Combine(destDir, name), overwrite: true);
+            Log($"  {logLabel}/{name}");
+            if (progressRange > 0)
+                ProgressChanged?.Invoke(
+                    progressStart + (double)(i + 1) / files.Length * progressRange,
+                    $"{i + 1}/{files.Length}: {name}");
+            await Task.Yield();
+        }
+    }
+
+    private void CopyLangDir(string srcLang, string destLang)
+    {
+        if (!Directory.Exists(srcLang)) return;
+        foreach (var langSubDir in Directory.GetDirectories(srcLang))
+        {
+            var langCode  = Path.GetFileName(langSubDir);
+            var destSubDir = Path.Combine(destLang, langCode);
+            Directory.CreateDirectory(destSubDir);
+            foreach (var f in Directory.GetFiles(langSubDir))
             {
-                var langCode = Path.GetFileName(langSubDir);
-                var destLangSubDir = Path.Combine(langDest, langCode);
-                Directory.CreateDirectory(destLangSubDir);
-                foreach (var f in Directory.GetFiles(langSubDir))
-                {
-                    File.Copy(f, Path.Combine(destLangSubDir, Path.GetFileName(f)), overwrite: true);
-                    Log($"  lang/{langCode}/{Path.GetFileName(f)}");
-                }
+                File.Copy(f, Path.Combine(destSubDir, Path.GetFileName(f)), overwrite: true);
+                Log($"  lang/{langCode}/{Path.GetFileName(f)}");
             }
         }
-
-        ProgressChanged?.Invoke(90, "");
     }
 
     private async Task CopyFileWithProgressAsync(string src, string dest, CancellationToken ct)
@@ -354,12 +348,23 @@ public class InstallerService
         {
             await DownloadFileAsync(url, tempZip, label, ct);
             SetStep(Loc.T("inst_StepExtract", label));
+
+            Directory.CreateDirectory(destDir);
+            var canonBase = Path.GetFullPath(destDir).TrimEnd(Path.DirectorySeparatorChar)
+                            + Path.DirectorySeparatorChar;
+
             using var archive = ZipFile.OpenRead(tempZip);
             foreach (var entry in archive.Entries)
             {
                 if (entry.Length == 0) continue;
                 if (extractFilter != null && !extractFilter(entry)) continue;
-                var destPath = Path.Combine(destDir, entry.Name);
+                var destPath = Path.GetFullPath(Path.Combine(destDir, entry.Name));
+                // Guard against path traversal in downloaded ZIPs
+                if (!destPath.StartsWith(canonBase, StringComparison.OrdinalIgnoreCase))
+                {
+                    Log($"  [BLOCKED] path traversal: {entry.Name}");
+                    continue;
+                }
                 entry.ExtractToFile(destPath, overwrite: true);
                 Log($"  {entry.Name}");
             }
@@ -458,22 +463,27 @@ public class InstallerService
 
     private static void CreateShortcut(string shortcutPath, string targetPath, string description)
     {
-        var esc = (string s) => s.Replace("'", "''");
-        var script =
-            $"$ws = New-Object -ComObject WScript.Shell; " +
-            $"$s = $ws.CreateShortcut('{esc(shortcutPath)}'); " +
-            $"$s.TargetPath = '{esc(targetPath)}'; " +
-            $"$s.WorkingDirectory = '{esc(Path.GetDirectoryName(targetPath) ?? "")}'; " +
-            $"$s.Description = '{esc(description)}'; " +
-            $"$s.IconLocation = '{esc(targetPath)},0'; " +
-            $"$s.Save()";
-
+        // Single-quoted PS strings: only ' needs escaping (as ''). Dollar signs and backticks
+        // are treated literally — no variable expansion. Using -EncodedCommand bypasses outer
+        // command-line quoting entirely, preventing any injection via path characters.
+        var esc  = (string s) => s.Replace("'", "''");
+        var work = Path.GetDirectoryName(targetPath) ?? "";
+        var script = string.Join("\n",
+            "$ws = New-Object -ComObject WScript.Shell",
+            $"$s = $ws.CreateShortcut('{esc(shortcutPath)}')",
+            $"$s.TargetPath = '{esc(targetPath)}'",
+            $"$s.WorkingDirectory = '{esc(work)}'",
+            $"$s.Description = '{esc(description)}'",
+            $"$s.IconLocation = '{esc(targetPath)},0'",
+            "$s.Save()"
+        );
+        var encoded = Convert.ToBase64String(System.Text.Encoding.Unicode.GetBytes(script));
         Process.Start(new ProcessStartInfo
         {
-            FileName  = "powershell.exe",
-            Arguments = $"-NoProfile -NonInteractive -Command \"{script.Replace("\"", "\\\"")}\"",
-            WindowStyle    = ProcessWindowStyle.Hidden,
-            CreateNoWindow = true,
+            FileName        = "powershell.exe",
+            Arguments       = $"-NoProfile -NonInteractive -EncodedCommand {encoded}",
+            WindowStyle     = ProcessWindowStyle.Hidden,
+            CreateNoWindow  = true,
             UseShellExecute = false,
         })?.WaitForExit();
     }
@@ -494,7 +504,7 @@ public class InstallerService
             if (k == null) return;
             var uninstallerPath = Path.Combine(appDir, "ClipNotes.Uninstaller.exe");
             k.SetValue("DisplayName",     "ClipNotes");
-            k.SetValue("DisplayVersion",  "1.0.0");
+            k.SetValue("DisplayVersion",  AppVersion);
             k.SetValue("Publisher",       "pro4up");
             k.SetValue("InstallLocation", installDir);
             k.SetValue("DisplayIcon",     Path.Combine(appDir, "ClipNotes.exe"));

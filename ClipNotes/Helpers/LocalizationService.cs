@@ -34,7 +34,10 @@ public static class LocalizationService
 
             _currentLang = lang;
         }
-        catch { }
+        catch (Exception ex)
+        {
+            ClipNotes.Services.LogService.Warn($"LocalizationService: failed to load '{lang}': {ex.Message}");
+        }
     }
 
     /// <summary>Возвращает список доступных языков (папки в lang/).</summary>

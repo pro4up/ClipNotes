@@ -67,18 +67,24 @@ public class SessionService
         File.WriteAllText(path, JsonSerializer.Serialize(file, JsonOptions));
     }
 
-    private static string SanitizeFileName(string name)
-    {
-        foreach (var c in Path.GetInvalidFileNameChars())
-            name = name.Replace(c, '_');
-        return name.Trim();
-    }
+    // Immutable: aggregates replacements without mutating the input parameter
+    private static string SanitizeFileName(string name) =>
+        Path.GetInvalidFileNameChars()
+            .Aggregate(name, (current, c) => current.Replace(c, '_'))
+            .Trim();
 
     public MarkerFile? LoadMarkersFile(string filePath)
     {
         if (!File.Exists(filePath)) return null;
-        try { return JsonSerializer.Deserialize<MarkerFile>(File.ReadAllText(filePath), JsonOptions); }
-        catch { return null; }
+        try
+        {
+            return JsonSerializer.Deserialize<MarkerFile>(File.ReadAllText(filePath), JsonOptions);
+        }
+        catch (Exception ex)
+        {
+            LogService.Warn($"LoadMarkersFile failed ({filePath}): {ex.Message}");
+            return null;
+        }
     }
 
     public SessionData? LoadSessionMeta(string sessionFolder)

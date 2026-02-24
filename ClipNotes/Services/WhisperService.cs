@@ -26,7 +26,9 @@ public class WhisperService
         var threads = Math.Min(Environment.ProcessorCount, 8);
         var args = $"-m \"{_modelPath}\" -f \"{audioClipPath}\" -t {threads}";
 
-        if (language != "auto" && !string.IsNullOrWhiteSpace(language))
+        // Strictly whitelist language codes (ISO 639-1/3: 2-8 lowercase alpha chars) before injecting
+        if (language != "auto" && !string.IsNullOrWhiteSpace(language)
+            && System.Text.RegularExpressions.Regex.IsMatch(language, @"^[a-z]{2,8}$"))
             args += $" -l {language}";
 
         if (!string.IsNullOrWhiteSpace(glossary))

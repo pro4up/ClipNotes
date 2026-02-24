@@ -23,6 +23,11 @@ public class ObsWebSocketService : IDisposable
 
     public async Task<bool> ConnectAsync(string host, int port, string? password, CancellationToken ct = default)
     {
+        if (string.IsNullOrWhiteSpace(host))
+        {
+            Error?.Invoke("OBS host не может быть пустым");
+            return false;
+        }
         try
         {
             Disconnect();
@@ -113,7 +118,12 @@ public class ObsWebSocketService : IDisposable
 
         using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(10));
         using var linked = CancellationTokenSource.CreateLinkedTokenSource(ct, timeout.Token);
-        linked.Token.Register(() => tcs.TrySetCanceled());
+        // Clean up the pending entry on cancellation/timeout to prevent dictionary memory leak
+        linked.Token.Register(() =>
+        {
+            lock (_lock) _pendingRequests.Remove(id);
+            tcs.TrySetCanceled();
+        });
 
         return await tcs.Task;
     }
