@@ -70,7 +70,7 @@ public partial class ProgressPage : UserControl
     private void AppendLog(string? message)
     {
         if (message == null) return;
-        LogText.AppendText(message + "\n"); // AppendText avoids O(n²) string allocation
+        LogText.Inlines.Add(message + "\n"); // Inlines.Add avoids O(n²) string allocation
         LogScroll.ScrollToBottom();
     }
 }
