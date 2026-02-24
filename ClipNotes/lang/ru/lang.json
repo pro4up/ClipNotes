@@ -48,7 +48,7 @@
   "loc_SubHeadNaming":       "Именование записей",
   "loc_CheckAskName":        "Запрашивать имя записи перед стартом (если поле пустое)",
   "loc_CheckAppendDate":     "Добавлять авто-подпись к имени файла видео",
-  "loc_LabelDateFormat":     "Формат авто-подписи ({dd}=дни, {MM}=месяцы, {yyyy}/{yy}=год):",
+  "loc_LabelDateFormat":     "Формат авто-подписи ({dd}=дни, {mm}=месяцы, {yyyy}/{yy}=год):",
   "loc_DateFormatCustom":    "Произвольный",
   "loc_DatePreset_DM":       "дни.месяцы",
   "loc_DatePreset_MY":       "месяцы.год",

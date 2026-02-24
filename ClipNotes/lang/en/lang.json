@@ -48,7 +48,7 @@
   "loc_SubHeadNaming":       "Session naming",
   "loc_CheckAskName":        "Ask for session name before start (if field is empty)",
   "loc_CheckAppendDate":     "Append auto-suffix to video filename",
-  "loc_LabelDateFormat":     "Auto-suffix format ({dd}=days, {MM}=months, {yyyy}/{yy}=year):",
+  "loc_LabelDateFormat":     "Auto-suffix format ({dd}=days, {mm}=months, {yyyy}/{yy}=year):",
   "loc_DateFormatCustom":    "Custom",
   "loc_DatePreset_DM":       "days.months",
   "loc_DatePreset_MY":       "months.year",

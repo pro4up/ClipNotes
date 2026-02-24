@@ -68,7 +68,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _sessionName = "";
     [ObservableProperty] private bool _askSessionName = true;
     [ObservableProperty] private bool _appendDateSuffix = false;
-    [ObservableProperty] private string _dateSuffixFormat = "_{yyyy}.{MM}.{dd}";
+    [ObservableProperty] private string _dateSuffixFormat = "_{yyyy}.{mm}.{dd}";
 
     // --- Recording fields ---
     [ObservableProperty] private bool _isRecording;
@@ -883,10 +883,9 @@ public partial class MainViewModel : ObservableObject
         var suffix = DateSuffixFormat
             .Replace("{yyyy}", dt.Year.ToString("D4"))
             .Replace("{yy}", dt.ToString("yy"))
-            .Replace("{MM}", dt.Month.ToString("D2"))
+            .Replace("{mm}", dt.Month.ToString("D2"))
             .Replace("{dd}", dt.Day.ToString("D2"))
             .Replace("{HH}", dt.Hour.ToString("D2"))
-            .Replace("{mm}", dt.Minute.ToString("D2"))
             .Replace("{ss}", dt.Second.ToString("D2"));
         return string.IsNullOrWhiteSpace(baseName) ? suffix : $"{baseName}{suffix}";
     }
