@@ -25,6 +25,28 @@ public partial class MainWindow : Window
         App.ApplyTitleBarTheme(this, App.IsDark);
         SetupHoldAnimation();
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
+        SyncDatePresetCombo();
+    }
+
+    /// <summary>Syncs the preset ComboBox selection to match the currently loaded DateSuffixFormat.</summary>
+    private void SyncDatePresetCombo()
+    {
+        var format = ViewModel.DateSuffixFormat;
+        foreach (ComboBoxItem item in DatePresetCombo.Items)
+        {
+            var tag = item.Tag?.ToString();
+            if (!string.IsNullOrEmpty(tag) && tag != "Custom" && tag == format)
+            {
+                DatePresetCombo.SelectionChanged -= DateSuffixPreset_SelectionChanged;
+                DatePresetCombo.SelectedItem = item;
+                DatePresetCombo.SelectionChanged += DateSuffixPreset_SelectionChanged;
+                return;
+            }
+        }
+        // No preset matched → select "Custom"
+        DatePresetCombo.SelectionChanged -= DateSuffixPreset_SelectionChanged;
+        DatePresetCombo.SelectedIndex = DatePresetCombo.Items.Count - 1;
+        DatePresetCombo.SelectionChanged += DateSuffixPreset_SelectionChanged;
     }
 
     private void SetupHoldAnimation()
@@ -114,6 +136,11 @@ public partial class MainWindow : Window
             if (tag == "Custom" || string.IsNullOrEmpty(tag)) return;
             ViewModel.DateSuffixFormat = tag;
         }
+    }
+
+    private void LogTextBox_TextChanged(object sender, TextChangedEventArgs e)
+    {
+        if (sender is TextBox tb) tb.ScrollToEnd();
     }
 
     private void HotkeyTextBox_GotFocus(object sender, RoutedEventArgs e)

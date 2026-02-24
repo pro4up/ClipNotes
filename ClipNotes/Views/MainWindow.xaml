@@ -257,6 +257,35 @@
                                 </StackPanel>
                             </StackPanel>
                         </Border>
+
+                        <!-- Log output -->
+                        <Border Style="{StaticResource Card}">
+                            <StackPanel>
+                                <DockPanel Margin="0,0,0,8">
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
+                                        <Button Style="{StaticResource SecondaryButton}"
+                                                Content="{DynamicResource loc_BtnCopyLogs}"
+                                                Command="{Binding CopyLogsToClipboardCommand}"
+                                                Margin="0,0,8,0"/>
+                                        <Button Style="{StaticResource SecondaryButton}"
+                                                Content="{DynamicResource loc_BtnOpenLogs}"
+                                                Command="{Binding OpenLogsFolderCommand}"/>
+                                    </StackPanel>
+                                    <TextBlock Style="{StaticResource SubHeading}"
+                                               Text="{DynamicResource loc_SubHeadLogs}"
+                                               VerticalAlignment="Center" Margin="0"/>
+                                </DockPanel>
+                                <TextBox x:Name="LogTextBox"
+                                         Text="{Binding LogText, Mode=OneWay}"
+                                         IsReadOnly="True"
+                                         MaxHeight="160"
+                                         FontFamily="Consolas"
+                                         FontSize="11"
+                                         TextWrapping="Wrap"
+                                         VerticalScrollBarVisibility="Auto"
+                                         TextChanged="LogTextBox_TextChanged"/>
+                            </StackPanel>
+                        </Border>
                     </StackPanel>
                 </ScrollViewer>
             </TabItem>
@@ -453,7 +482,8 @@
                                     <TextBlock Style="{StaticResource Label}" Margin="0,0,0,4"
                                                Text="{DynamicResource loc_LabelDateFormat}"/>
                                     <StackPanel Orientation="Horizontal">
-                                        <ComboBox Width="180" Margin="0,0,8,0"
+                                        <ComboBox x:Name="DatePresetCombo"
+                                                  Width="180" Margin="0,0,8,0"
                                                   SelectedIndex="0"
                                                   SelectionChanged="DateSuffixPreset_SelectionChanged">
                                             <ComboBoxItem Content="{DynamicResource loc_DatePreset_DM}"  Tag="{}_{dd}.{mm}"/>

@@ -142,5 +142,9 @@
   "loc_FilterMarkers":       "Файлы маркеров (*.json)|*.json|Все файлы (*.*)|*.*",
   "loc_DlgSessionName":      "Имя записи",
   "loc_DlgSessionNamePrompt":"Введите имя для этой записи (или оставьте пустым):",
-  "loc_DlgSelectFolder":     "Выберите папку"
+  "loc_DlgSelectFolder":     "Выберите папку",
+
+  "loc_SubHeadLogs":         "Журнал",
+  "loc_BtnOpenLogs":         "Открыть папку",
+  "loc_BtnCopyLogs":         "Копировать"
 }

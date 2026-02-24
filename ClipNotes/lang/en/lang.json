@@ -142,5 +142,9 @@
   "loc_FilterMarkers":       "Marker files (*.json)|*.json|All files (*.*)|*.*",
   "loc_DlgSessionName":      "Session name",
   "loc_DlgSessionNamePrompt":"Enter a name for this recording (or leave empty):",
-  "loc_DlgSelectFolder":     "Select folder"
+  "loc_DlgSelectFolder":     "Select folder",
+
+  "loc_SubHeadLogs":         "Log",
+  "loc_BtnOpenLogs":         "Open Folder",
+  "loc_BtnCopyLogs":         "Copy"
 }

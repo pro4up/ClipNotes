@@ -181,7 +181,7 @@ public partial class MainWindow : Window
         {
             if (_pages[6] is FinishPage fp && fp.ShouldLaunch)
             {
-                var exePath = System.IO.Path.Combine(_options.InstallPath, "ClipNotes.exe");
+                var exePath = System.IO.Path.Combine(_options.InstallPath, "app", "ClipNotes.exe");
                 if (System.IO.File.Exists(exePath))
                     System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
                     {

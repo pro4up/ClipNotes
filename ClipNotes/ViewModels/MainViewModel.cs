@@ -68,7 +68,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _sessionName = "";
     [ObservableProperty] private bool _askSessionName = true;
     [ObservableProperty] private bool _appendDateSuffix = false;
-    [ObservableProperty] private string _dateSuffixFormat = "_{yyyy}.{mm}.{dd}";
+    [ObservableProperty] private string _dateSuffixFormat = "_{dd}.{mm}";
 
     // --- Recording fields ---
     [ObservableProperty] private bool _isRecording;
@@ -115,6 +115,9 @@ public partial class MainViewModel : ObservableObject
 
     // --- Tool validation ---
     [ObservableProperty] private string _toolsStatus = "";
+
+    // --- Logs ---
+    [ObservableProperty] private string _logText = "";
 
     // --- History ---
     public ObservableCollection<SessionHistoryEntry> SessionHistory { get; } = new();
@@ -212,6 +215,14 @@ public partial class MainViewModel : ObservableObject
         _hotkeyService.HotkeyReleased += OnHotkeyReleased;
 
         Markers.CollectionChanged += (_, _) => OnPropertyChanged(nameof(MarkersCountLabel));
+
+        // Load today's existing log file into buffer, then subscribe to new entries
+        var todayLog = Path.Combine(LogSvc.LogDir, $"{DateTime.Now:yyyy-MM-dd}.log");
+        if (File.Exists(todayLog))
+        {
+            try { _logText = File.ReadAllText(todayLog).TrimEnd(); } catch { }
+        }
+        LogSvc.LogEntryAdded += OnLogEntryAdded;
 
         AvailableLanguages = Loc.GetAvailableLanguages();
         LoadSettings();
@@ -683,7 +694,11 @@ public partial class MainViewModel : ObservableObject
     {
         if (string.IsNullOrWhiteSpace(OutputRootDirectory))
         {
-            ProcessingStatus = Loc.T("loc_StatusNeedOutputDir2");
+            System.Windows.MessageBox.Show(
+                Loc.T("loc_StatusNeedOutputDir2"),
+                "ClipNotes",
+                System.Windows.MessageBoxButton.OK,
+                System.Windows.MessageBoxImage.Warning);
             CurrentTab = 3;
             return;
         }
@@ -1179,8 +1194,33 @@ public partial class MainViewModel : ObservableObject
         }
     }
 
+    private void OnLogEntryAdded(string line)
+    {
+        Application.Current?.Dispatcher.Invoke(() =>
+            LogText = string.IsNullOrEmpty(LogText) ? line : LogText + "\n" + line);
+    }
+
+    [RelayCommand]
+    private void OpenLogsFolder()
+    {
+        try
+        {
+            Directory.CreateDirectory(LogSvc.LogDir);
+            Process.Start(new ProcessStartInfo(LogSvc.LogDir) { UseShellExecute = true });
+        }
+        catch (Exception ex) { LogSvc.Error("OpenLogsFolder failed", ex); }
+    }
+
+    [RelayCommand]
+    private void CopyLogsToClipboard()
+    {
+        try { System.Windows.Clipboard.SetText(string.IsNullOrEmpty(LogText) ? "" : LogText); }
+        catch (Exception ex) { LogSvc.Error("CopyLogsToClipboard failed", ex); }
+    }
+
     public void Cleanup()
     {
+        LogSvc.LogEntryAdded -= OnLogEntryAdded;
         _recordingTimer.Stop();
         _hotkeyService.Dispose();
         _obs.Dispose();

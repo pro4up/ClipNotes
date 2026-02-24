@@ -132,14 +132,14 @@ public class InstallerService
         SetStep(Loc.T("inst_StepRegister"));
         RegisterUninstaller(installDir, appDir);
 
-        // 9. Сохранить язык в settings.json
-        SaveLanguageToSettings();
+        // 9. Сохранить настройки в settings.json (Language, WhisperModel, StartWithWindows)
+        SaveSettingsToAppData();
 
         SetStep(Loc.T("inst_StepDone"));
         ProgressChanged?.Invoke(100, "");
     }
 
-    private void SaveLanguageToSettings()
+    private void SaveSettingsToAppData()
     {
         try
         {
@@ -149,17 +149,21 @@ public class InstallerService
             Directory.CreateDirectory(appDataDir);
             var settingsPath = Path.Combine(appDataDir, "settings.json");
 
+            JsonObject obj;
             if (File.Exists(settingsPath))
             {
                 var node = JsonNode.Parse(File.ReadAllText(settingsPath));
-                if (node is JsonObject obj)
-                {
-                    obj["Language"] = _options.Language;
-                    File.WriteAllText(settingsPath, obj.ToJsonString());
-                    return;
-                }
+                obj = node as JsonObject ?? new JsonObject();
             }
-            File.WriteAllText(settingsPath, $"{{\"Language\":\"{_options.Language}\"}}");
+            else
+            {
+                obj = new JsonObject();
+            }
+
+            obj["Language"]        = _options.Language;
+            obj["WhisperModel"]    = _options.Model;
+            obj["StartWithWindows"] = _options.RunOnStartup;
+            File.WriteAllText(settingsPath, obj.ToJsonString());
         }
         catch { }
     }
