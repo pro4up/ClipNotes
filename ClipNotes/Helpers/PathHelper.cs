@@ -9,11 +9,15 @@ public static class PathHelper
         Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName)
         ?? AppContext.BaseDirectory;
 
-    public static string FFmpegPath => Path.Combine(AppDir, "tools", "ffmpeg.exe");
-    public static string FFprobePath => Path.Combine(AppDir, "tools", "ffprobe.exe");
-    public static string WhisperCliPath => Path.Combine(AppDir, "tools", "whisper-cli.exe");
+    // tools/, models/, lang/ reside one level above the app/ subfolder
+    private static string RootDir =>
+        Path.GetFullPath(Path.Combine(AppDir, ".."));
 
-    public static string ModelsDir => Path.Combine(AppDir, "models");
+    public static string FFmpegPath => Path.Combine(RootDir, "tools", "ffmpeg.exe");
+    public static string FFprobePath => Path.Combine(RootDir, "tools", "ffprobe.exe");
+    public static string WhisperCliPath => Path.Combine(RootDir, "tools", "whisper-cli.exe");
+
+    public static string ModelsDir => Path.Combine(RootDir, "models");
 
     public static string GetModelPath(string modelName)
     {

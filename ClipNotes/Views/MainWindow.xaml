@@ -456,9 +456,9 @@
                                         <ComboBox Width="180" Margin="0,0,8,0"
                                                   SelectedIndex="0"
                                                   SelectionChanged="DateSuffixPreset_SelectionChanged">
-                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_DM}"  Tag="{}{dd}.{MM}"/>
-                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_MY}"  Tag="{}{MM}.{yyyy}"/>
-                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_DMY}" Tag="{}{dd}.{MM}.{yyyy}"/>
+                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_DM}"  Tag="{}_{dd}.{MM}"/>
+                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_MY}"  Tag="{}_{MM}.{yyyy}"/>
+                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_DMY}" Tag="{}_{dd}.{MM}.{yyyy}"/>
                                             <ComboBoxItem Content="{DynamicResource loc_DateFormatCustom}" Tag="Custom"/>
                                         </ComboBox>
                                         <TextBox Text="{Binding DateSuffixFormat, UpdateSourceTrigger=PropertyChanged}"

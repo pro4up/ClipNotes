@@ -17,9 +17,9 @@ $setupSourceDir = "$scriptDir\ClipNotes.Setup"
 $compileDir = "$scriptDir\..\app"
 $appDir     = "$compileDir\app"       # ClipNotes.exe + Uninstaller.exe go here
 $setupOutputDir = "$scriptDir\..\Setup"
-$toolsOutputDir = "$appDir\tools"
-$modelsOutputDir = "$appDir\models"
-$licensesDir = "$appDir\licenses"
+$toolsOutputDir = "$compileDir\tools"
+$modelsOutputDir = "$compileDir\models"
+$licensesDir = "$compileDir\licenses"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  ClipNotes Build System" -ForegroundColor Cyan
@@ -82,6 +82,20 @@ if (Test-Path $uninstallerDir) {
     if ($LASTEXITCODE -ne 0) { throw "Uninstaller build failed" }
 } else {
     Write-Host "  [skip] ClipNotes.Uninstaller project not found" -ForegroundColor DarkGray
+}
+
+# Step 5c: Move lang/ from appDir up to compileDir (new hierarchy: lang/ at root, not inside app/)
+# Use Copy+Delete instead of Move-Item to avoid PowerShell timing issues where Move-Item
+# places the folder *inside* the destination if the destination still exists on disk.
+Write-Host ""
+Write-Host "[5c/6] Moving lang/ to root output dir..." -ForegroundColor Yellow
+if (Test-Path "$appDir\lang") {
+    if (Test-Path "$compileDir\lang") { Remove-Item "$compileDir\lang" -Recurse -Force }
+    Copy-Item "$appDir\lang" "$compileDir\lang" -Recurse
+    Remove-Item "$appDir\lang" -Recurse -Force
+    Write-Host "  [OK] lang/ moved to $compileDir\lang" -ForegroundColor Green
+} else {
+    Write-Host "  [skip] lang/ not found in app output" -ForegroundColor DarkGray
 }
 
 # Step 6: Create licenses
@@ -201,25 +215,22 @@ if ($BuildSetup) {
             param($srcPath, $entryName)
             [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $srcPath, $entryName, [System.IO.Compression.CompressionLevel]::Fastest) | Out-Null
         }
-        # All app files go under ClipNotes/app/ in the bundle
+        # App exe/dll/json under ClipNotes/app/
         Get-ChildItem "$appDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
             & $addFile $_.FullName "ClipNotes/app/$($_.Name)"
         }
-        if (Test-Path "$appDir\tools") {
-            Get-ChildItem "$appDir\tools" -File | ForEach-Object {
-                & $addFile $_.FullName "ClipNotes/app/tools/$($_.Name)"
+        # licenses/ at root level: ClipNotes/licenses/
+        if (Test-Path "$licensesDir") {
+            Get-ChildItem "$licensesDir" -File | ForEach-Object {
+                & $addFile $_.FullName "ClipNotes/licenses/$($_.Name)"
             }
         }
-        if (Test-Path "$appDir\licenses") {
-            Get-ChildItem "$appDir\licenses" -File | ForEach-Object {
-                & $addFile $_.FullName "ClipNotes/app/licenses/$($_.Name)"
-            }
-        }
-        if (Test-Path "$appDir\lang") {
-            $resolvedAppDir = (Resolve-Path $appDir).Path
-            Get-ChildItem "$appDir\lang" -Recurse -File | ForEach-Object {
-                $relPath = $_.FullName.Substring("$resolvedAppDir\".Length).Replace('\', '/')
-                & $addFile $_.FullName "ClipNotes/app/$relPath"
+        # lang/ at root level: ClipNotes/lang/ru/lang.json etc.
+        if (Test-Path "$compileDir\lang") {
+            $resolvedLangDir = (Resolve-Path "$compileDir\lang").Path
+            Get-ChildItem "$compileDir\lang" -Recurse -File | ForEach-Object {
+                $relPath = $_.FullName.Substring("$resolvedLangDir\".Length).Replace('\', '/')
+                & $addFile $_.FullName "ClipNotes/lang/$relPath"
             }
         }
     } finally {
@@ -320,16 +331,16 @@ if ($BuildOfflineSetup) {
         }
 
         # licenses/
-        if (Test-Path "$appDir\licenses") {
-            Get-ChildItem "$appDir\licenses" -File | ForEach-Object {
+        if (Test-Path "$licensesDir") {
+            Get-ChildItem "$licensesDir" -File | ForEach-Object {
                 & $addFile $_.FullName "licenses/$($_.Name)"
             }
         }
 
         # lang/ — локализация (lang/ru/lang.json, lang/en/lang.json, ...)
-        if (Test-Path "$appDir\lang") {
-            $resolvedLangDir = (Resolve-Path "$appDir\lang").Path
-            Get-ChildItem "$appDir\lang" -Recurse -File | ForEach-Object {
+        if (Test-Path "$compileDir\lang") {
+            $resolvedLangDir = (Resolve-Path "$compileDir\lang").Path
+            Get-ChildItem "$compileDir\lang" -Recurse -File | ForEach-Object {
                 $relPath = $_.FullName.Substring("$resolvedLangDir\".Length).Replace('\', '/')
                 & $addFile $_.FullName "lang/$relPath"
             }
@@ -391,21 +402,24 @@ Write-Host "Contents:" -ForegroundColor White
 if (Test-Path "$appDir\ClipNotes.exe") { Write-Host "  [OK] app\ClipNotes.exe" -ForegroundColor Green }
 else { Write-Host "  [!!] app\ClipNotes.exe MISSING" -ForegroundColor Red }
 
-if (Test-Path "$toolsOutputDir\ffmpeg.exe") { Write-Host "  [OK] app\tools\ffmpeg.exe" -ForegroundColor Green }
-else { Write-Host "  [!!] app\tools\ffmpeg.exe MISSING" -ForegroundColor Red }
+if (Test-Path "$toolsOutputDir\ffmpeg.exe") { Write-Host "  [OK] tools\ffmpeg.exe" -ForegroundColor Green }
+else { Write-Host "  [!!] tools\ffmpeg.exe MISSING" -ForegroundColor Red }
 
-if (Test-Path "$toolsOutputDir\ffprobe.exe") { Write-Host "  [OK] app\tools\ffprobe.exe" -ForegroundColor Green }
-else { Write-Host "  [!!] app\tools\ffprobe.exe MISSING" -ForegroundColor Red }
+if (Test-Path "$toolsOutputDir\ffprobe.exe") { Write-Host "  [OK] tools\ffprobe.exe" -ForegroundColor Green }
+else { Write-Host "  [!!] tools\ffprobe.exe MISSING" -ForegroundColor Red }
 
-if (Test-Path "$toolsOutputDir\whisper-cli.exe") { Write-Host "  [OK] app\tools\whisper-cli.exe" -ForegroundColor Green }
-else { Write-Host "  [!!] app\tools\whisper-cli.exe MISSING" -ForegroundColor Red }
+if (Test-Path "$toolsOutputDir\whisper-cli.exe") { Write-Host "  [OK] tools\whisper-cli.exe" -ForegroundColor Green }
+else { Write-Host "  [!!] tools\whisper-cli.exe MISSING" -ForegroundColor Red }
 
 if (Test-Path "$appDir\ClipNotes.Uninstaller.exe") { Write-Host "  [OK] app\ClipNotes.Uninstaller.exe" -ForegroundColor Green }
 else { Write-Host "  [!!] app\ClipNotes.Uninstaller.exe MISSING" -ForegroundColor Yellow }
 
 $modelFile = Get-ChildItem -Path $modelsOutputDir -Filter "ggml-*.bin" -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($modelFile) { Write-Host "  [OK] app\models\$($modelFile.Name)" -ForegroundColor Green }
+if ($modelFile) { Write-Host "  [OK] models\$($modelFile.Name)" -ForegroundColor Green }
 else { Write-Host "  [!!] Model file MISSING" -ForegroundColor Red }
 
-Write-Host "  [OK] app\licenses\" -ForegroundColor Green
+if (Test-Path "$compileDir\lang") { Write-Host "  [OK] lang\" -ForegroundColor Green }
+else { Write-Host "  [!!] lang\ MISSING" -ForegroundColor Red }
+
+Write-Host "  [OK] licenses\" -ForegroundColor Green
 Write-Host ""

@@ -36,8 +36,8 @@ public class InstallerService
     {
         var installDir = _options.InstallPath;
         var appDir     = Path.Combine(installDir, "app");
-        var toolsDir   = Path.Combine(appDir, "tools");
-        var modelsDir  = Path.Combine(appDir, "models");
+        var toolsDir   = Path.Combine(installDir, "tools");
+        var modelsDir  = Path.Combine(installDir, "models");
 
         // 1. Создать папки
         SetStep(Loc.T("inst_StepCreateDir"));
@@ -59,7 +59,7 @@ public class InstallerService
         if (localSrc != null)
         {
             SetStep(Loc.T("inst_StepCopyApp"));
-            await CopyAppFilesAsync(localSrc, appDir, toolsDir, ct);
+            await CopyAppFilesAsync(localSrc, appDir, installDir, ct);
         }
         else
         {
@@ -185,22 +185,26 @@ public class InstallerService
     }
 
     private async Task CopyAppFilesAsync(
-        string srcDir, string installDir, string toolsDir, CancellationToken ct)
+        string srcAppDir, string destAppDir, string destRootDir, CancellationToken ct)
     {
-        var rootFiles = Directory.GetFiles(srcDir);
+        // Copy exe/dll/json app files → destAppDir (installDir/app)
+        var rootFiles = Directory.GetFiles(srcAppDir);
         for (int i = 0; i < rootFiles.Length; i++)
         {
             ct.ThrowIfCancellationRequested();
             var src  = rootFiles[i];
             var name = Path.GetFileName(src);
-            File.Copy(src, Path.Combine(installDir, name), overwrite: true);
-            Log($"  {name}");
-            ProgressChanged?.Invoke((double)(i + 1) / rootFiles.Length * 50,
+            File.Copy(src, Path.Combine(destAppDir, name), overwrite: true);
+            Log($"  app/{name}");
+            ProgressChanged?.Invoke((double)(i + 1) / rootFiles.Length * 40,
                 $"{i + 1}/{rootFiles.Length}: {name}");
             await Task.Yield();
         }
 
-        var srcTools = Path.Combine(srcDir, "tools");
+        // tools/ lives one level up in the build output (srcAppDir/../tools)
+        var srcTools = Path.GetFullPath(Path.Combine(srcAppDir, "..", "tools"));
+        var destToolsDir = Path.Combine(destRootDir, "tools");
+        Directory.CreateDirectory(destToolsDir);
         if (Directory.Exists(srcTools))
         {
             var toolFiles = Directory.GetFiles(srcTools);
@@ -208,28 +212,29 @@ public class InstallerService
             {
                 ct.ThrowIfCancellationRequested();
                 var name = Path.GetFileName(toolFiles[i]);
-                File.Copy(toolFiles[i], Path.Combine(toolsDir, name), overwrite: true);
+                File.Copy(toolFiles[i], Path.Combine(destToolsDir, name), overwrite: true);
                 Log($"  tools/{name}");
-                ProgressChanged?.Invoke(50 + (double)(i + 1) / toolFiles.Length * 40,
+                ProgressChanged?.Invoke(40 + (double)(i + 1) / toolFiles.Length * 35,
                     $"tools/{name}");
                 await Task.Yield();
             }
         }
 
-        var srcLicenses = Path.Combine(srcDir, "licenses");
+        // licenses/ lives one level up
+        var srcLicenses = Path.GetFullPath(Path.Combine(srcAppDir, "..", "licenses"));
         if (Directory.Exists(srcLicenses))
         {
-            var licDir = Path.Combine(installDir, "licenses");
+            var licDir = Path.Combine(destRootDir, "licenses");
             Directory.CreateDirectory(licDir);
             foreach (var f in Directory.GetFiles(srcLicenses))
                 File.Copy(f, Path.Combine(licDir, Path.GetFileName(f)), overwrite: true);
         }
 
-        // Copy lang/ directory (localization files)
-        var srcLang = Path.Combine(srcDir, "lang");
+        // lang/ lives one level up
+        var srcLang = Path.GetFullPath(Path.Combine(srcAppDir, "..", "lang"));
         if (Directory.Exists(srcLang))
         {
-            var langDest = Path.Combine(installDir, "lang");
+            var langDest = Path.Combine(destRootDir, "lang");
             foreach (var langSubDir in Directory.GetDirectories(srcLang))
             {
                 var langCode = Path.GetFileName(langSubDir);
@@ -377,8 +382,8 @@ public class InstallerService
     {
         var bundlePath = GetOfflineBundlePath();
         Log($"Offline bundle: {bundlePath}");
-        var modelsDir = Path.Combine(appDir, "models");
-        var licDir    = Path.Combine(appDir, "licenses");
+        var modelsDir = Path.Combine(installDir, "models");
+        var licDir    = Path.Combine(installDir, "licenses");
         Directory.CreateDirectory(modelsDir);
         Directory.CreateDirectory(licDir);
 
@@ -406,7 +411,7 @@ public class InstallerService
                 "models"       => Path.Combine(modelsDir, fileName),
                 "licenses"     => Path.Combine(licDir,    fileName),
                 "lang"         => parts.Length >= 3
-                                    ? Path.Combine(appDir, "lang", parts[1], fileName)
+                                    ? Path.Combine(installDir, "lang", parts[1], fileName)
                                     : null,
                 _              => null,
             };

@@ -40,7 +40,7 @@ public static class LocalizationService
     /// <summary>Возвращает список доступных языков (папки в lang/).</summary>
     public static List<string> GetAvailableLanguages()
     {
-        var langDir = Path.Combine(PathHelper.AppDir, "lang");
+        var langDir = Path.Combine(PathHelper.AppDir, "..", "lang");
         if (!Directory.Exists(langDir)) return ["ru"];
         return Directory.GetDirectories(langDir)
             .Select(d => Path.GetFileName(d)!)
@@ -56,5 +56,5 @@ public static class LocalizationService
     }
 
     private static string GetLangPath(string lang) =>
-        Path.Combine(PathHelper.AppDir, "lang", lang, "lang.json");
+        Path.GetFullPath(Path.Combine(PathHelper.AppDir, "..", "lang", lang, "lang.json"));
 }

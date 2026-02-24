@@ -56,7 +56,7 @@ public class AppSettings
     // Session naming
     public bool AskSessionName { get; set; } = true;
     public bool AppendDateSuffix { get; set; } = false;
-    public string DateSuffixFormat { get; set; } = "{yyyy}.{MM}.{dd}";
+    public string DateSuffixFormat { get; set; } = "_{yyyy}.{MM}.{dd}";
     [System.Text.Json.Serialization.JsonIgnore]
     public string? SessionVideoName { get; set; } // runtime only, not persisted
 

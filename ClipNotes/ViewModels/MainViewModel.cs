@@ -68,7 +68,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string _sessionName = "";
     [ObservableProperty] private bool _askSessionName = true;
     [ObservableProperty] private bool _appendDateSuffix = false;
-    [ObservableProperty] private string _dateSuffixFormat = "{yyyy}.{MM}.{dd}";
+    [ObservableProperty] private string _dateSuffixFormat = "_{yyyy}.{MM}.{dd}";
 
     // --- Recording fields ---
     [ObservableProperty] private bool _isRecording;
@@ -611,6 +611,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            LogSvc.Error("StartRecording failed", ex);
             RecordingStatus = $"{Loc.T("loc_StatusError")}: {ex.Message}";
         }
     }
@@ -672,6 +673,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            LogSvc.Error("StopRecording failed", ex);
             RecordingStatus = $"{Loc.T("loc_StatusError")}: {ex.Message}";
         }
     }
@@ -724,6 +726,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            LogSvc.Error("LoadExistingVideo failed", ex);
             ProcessingStatus = $"{Loc.T("loc_StatusError")}: {ex.Message}";
         }
     }
@@ -885,7 +888,7 @@ public partial class MainViewModel : ObservableObject
             .Replace("{HH}", dt.Hour.ToString("D2"))
             .Replace("{mm}", dt.Minute.ToString("D2"))
             .Replace("{ss}", dt.Second.ToString("D2"));
-        return string.IsNullOrWhiteSpace(baseName) ? suffix : $"{baseName} {suffix}";
+        return string.IsNullOrWhiteSpace(baseName) ? suffix : $"{baseName}{suffix}";
     }
 
     private void SaveMarkersToSession()
@@ -922,6 +925,7 @@ public partial class MainViewModel : ObservableObject
         }
         catch (Exception ex)
         {
+            LogSvc.Error("AddMarker failed", ex);
             RecordingStatus = $"{Loc.T("loc_StatusError")}: {ex.Message}";
         }
     }

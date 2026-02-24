@@ -105,17 +105,18 @@ public partial class MainWindow : Window
             }
 
             var installDir = _installDir;
+            var cmdExe = Path.Combine(Environment.SystemDirectory, "cmd.exe");
             // Delay long enough for this process to fully exit (DLLs unmapped),
             // then delete the remaining install folder (including uninstaller exe + its DLLs).
-            // Use single '&' so rmdir runs even if del fails; no pre-del of selfExe needed.
+            // UseShellExecute=true inherits the elevated token so rmdir can delete from Program Files.
+            // timeout /t 4 waits 4 s (< auto-close 2 s + safety margin) then rmdir cleans everything.
             Process.Start(new ProcessStartInfo
             {
-                FileName  = "cmd.exe",
-                Arguments = $"/c ping 127.0.0.1 -n 8 > nul " +
-                            $"& rmdir /s /q \"{installDir}\"",
+                FileName       = cmdExe,
+                Arguments      = $"/c timeout /t 4 /nobreak > nul " +
+                                 $"& rmdir /s /q \"{installDir}\"",
                 WindowStyle    = ProcessWindowStyle.Hidden,
-                CreateNoWindow = true,
-                UseShellExecute = false,
+                UseShellExecute = true,
             });
 
             if (DeleteUserDataCheckBox.IsChecked == true)
