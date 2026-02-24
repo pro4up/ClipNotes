@@ -21,8 +21,11 @@ public partial class App : Application
         DispatcherUnhandledException += (s, args) =>
         {
             LogService.Error("Unhandled UI exception", args.Exception);
-            MessageBox.Show($"Неожиданная ошибка:\n{args.Exception.Message}\n\nПодробности в Logs/",
-                "ClipNotes — Ошибка", MessageBoxButton.OK, MessageBoxImage.Error);
+            var result = MessageBox.Show(
+                $"Неожиданная ошибка:\n{args.Exception.Message}\n\nЛог сохранён в:\n{LogService.LogDir}\n\nОткрыть папку с логами?",
+                "ClipNotes — Ошибка", MessageBoxButton.YesNo, MessageBoxImage.Error);
+            if (result == MessageBoxResult.Yes)
+                OpenLogsFolder();
             args.Handled = true;
         };
 
@@ -95,6 +98,16 @@ public partial class App : Application
                 int color = dark ? 0x001E1E1E : unchecked((int)0x00F7F7F2); // BGR
                 DwmSetWindowAttribute(hwnd, DWMWA_CAPTION_COLOR, ref color, sizeof(int));
             }
+        }
+        catch { }
+    }
+
+    private static void OpenLogsFolder()
+    {
+        try
+        {
+            System.IO.Directory.CreateDirectory(LogService.LogDir);
+            System.Diagnostics.Process.Start("explorer.exe", LogService.LogDir);
         }
         catch { }
     }

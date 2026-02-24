@@ -103,15 +103,21 @@ public class InstallerService
         }
 #endif
 
-        // 6. Ярлык
+        // 6. Ярлыки (Desktop + Start Menu)
+        var exePath = Path.Combine(installDir, "ClipNotes.exe");
         if (_options.CreateDesktopShortcut)
         {
             SetStep(Loc.T("inst_StepShortcut"));
             CreateShortcut(
                 Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "ClipNotes.lnk"),
-                Path.Combine(installDir, "ClipNotes.exe"),
-                "ClipNotes");
+                exePath, "ClipNotes");
         }
+
+        // Start Menu shortcut
+        var startMenuDir = Path.Combine(
+            Environment.GetFolderPath(Environment.SpecialFolder.StartMenu), "Programs", "ClipNotes");
+        Directory.CreateDirectory(startMenuDir);
+        CreateShortcut(Path.Combine(startMenuDir, "ClipNotes.lnk"), exePath, "ClipNotes");
 
         // 7. Автозапуск
         if (_options.RunOnStartup)
@@ -280,19 +286,23 @@ public class InstallerService
             // Detect and strip common top-level folder prefix (e.g. "ClipNotes/")
             // The bundle ZIP may wrap files in a subfolder;
             // the installer must extract directly into installDir.
-            var fileEntries = archive.Entries.Where(e => e.Length > 0).ToList();
+            // Normalize backslashes → forward slashes (Windows PowerShell may produce backslash paths).
+            var fileEntries = archive.Entries
+                .Where(e => e.Length > 0)
+                .Select(e => (entry: e, name: e.FullName.Replace('\\', '/')))
+                .ToList();
+
             string? prefix = null;
-            if (fileEntries.Count > 0 && fileEntries.All(e => e.FullName.Contains('/')))
+            if (fileEntries.Count > 0 && fileEntries.All(e => e.name.Contains('/')))
             {
-                var candidate = fileEntries[0].FullName[..(fileEntries[0].FullName.IndexOf('/') + 1)];
-                if (fileEntries.All(e => e.FullName.StartsWith(candidate, StringComparison.OrdinalIgnoreCase)))
+                var candidate = fileEntries[0].name[..(fileEntries[0].name.IndexOf('/') + 1)];
+                if (fileEntries.All(e => e.name.StartsWith(candidate, StringComparison.OrdinalIgnoreCase)))
                     prefix = candidate;
             }
 
-            foreach (var entry in archive.Entries)
+            foreach (var (entry, normalizedName) in fileEntries)
             {
-                if (entry.Length == 0) continue;
-                var relPath = entry.FullName;
+                var relPath = normalizedName;
                 if (prefix != null && relPath.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
                     relPath = relPath[prefix.Length..];
                 if (string.IsNullOrWhiteSpace(relPath)) continue;

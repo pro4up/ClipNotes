@@ -453,12 +453,14 @@
                                     <TextBlock Style="{StaticResource Label}" Margin="0,0,0,4"
                                                Text="{DynamicResource loc_LabelDateFormat}"/>
                                     <StackPanel Orientation="Horizontal">
-                                        <ComboBox Width="160" Margin="0,0,8,0"
+                                        <ComboBox Width="180" Margin="0,0,8,0"
                                                   SelectedIndex="0"
                                                   SelectionChanged="DateSuffixPreset_SelectionChanged">
-                                            <ComboBoxItem Content="{}{yyyy}.{MM}.{dd}"/>
-                                            <ComboBoxItem Content="{}{HH}.{mm}"/>
-                                            <ComboBoxItem Content="{}{HH}.{mm}.{yy}"/>
+                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_HMS}" Tag="{}{HH}:{mm}:{ss}"/>
+                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_HM}"  Tag="{}{HH}:{mm}"/>
+                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_DM}"  Tag="{}{dd}.{MM}"/>
+                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_MY}"  Tag="{}{MM}.{yyyy}"/>
+                                            <ComboBoxItem Content="{DynamicResource loc_DatePreset_DMY}" Tag="{}{dd}.{MM}.{yyyy}"/>
                                             <ComboBoxItem Content="{DynamicResource loc_DateFormatCustom}" Tag="Custom"/>
                                         </ComboBox>
                                         <TextBox Text="{Binding DateSuffixFormat, UpdateSourceTrigger=PropertyChanged}"

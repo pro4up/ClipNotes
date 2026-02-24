@@ -107,10 +107,12 @@ public partial class MainWindow : Window
 
     private void DateSuffixPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
+        if (!IsLoaded) return; // skip initial XAML initialization firing
         if (sender is ComboBox cb && cb.SelectedItem is ComboBoxItem item)
         {
-            if (item.Tag?.ToString() == "Custom") return;
-            ViewModel.DateSuffixFormat = item.Content?.ToString() ?? "";
+            var tag = item.Tag?.ToString();
+            if (tag == "Custom" || string.IsNullOrEmpty(tag)) return;
+            ViewModel.DateSuffixFormat = tag;
         }
     }
 

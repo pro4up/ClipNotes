@@ -5,8 +5,10 @@ namespace ClipNotes.Services;
 
 public static class LogService
 {
-    private static readonly string LogDir = Path.Combine(
-        Path.GetDirectoryName(Process.GetCurrentProcess().MainModule?.FileName) ?? ".", "logs");
+    // Logs go to %AppData%\ClipNotes\logs\ — always writable even when installed in Program Files
+    public static readonly string LogDir = Path.Combine(
+        Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+        "ClipNotes", "logs");
 
     public static void Info(string message) => Write("INFO", message);
     public static void Warn(string message) => Write("WARN", message);

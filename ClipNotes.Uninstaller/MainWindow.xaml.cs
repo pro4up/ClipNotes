@@ -73,6 +73,13 @@ public partial class MainWindow : Window
                 "ClipNotes.lnk");
             if (File.Exists(shortcut)) File.Delete(shortcut);
 
+            // Start Menu shortcut folder
+            var startMenuDir = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+                "Programs", "ClipNotes");
+            if (Directory.Exists(startMenuDir))
+                try { Directory.Delete(startMenuDir, recursive: true); } catch { }
+
             try
             {
                 using var run = Registry.CurrentUser.OpenSubKey(
@@ -98,12 +105,14 @@ public partial class MainWindow : Window
             }
 
             var installDir = _installDir;
+            // Delay long enough for this process to fully exit (DLLs unmapped),
+            // then delete the remaining install folder (including uninstaller exe + its DLLs).
+            // Use single '&' so rmdir runs even if del fails; no pre-del of selfExe needed.
             Process.Start(new ProcessStartInfo
             {
                 FileName  = "cmd.exe",
-                Arguments = $"/c ping 127.0.0.1 -n 3 > nul " +
-                            $"&& del /f /q \"{selfExe}\" " +
-                            $"&& rmdir /s /q \"{installDir}\"",
+                Arguments = $"/c ping 127.0.0.1 -n 8 > nul " +
+                            $"& rmdir /s /q \"{installDir}\"",
                 WindowStyle    = ProcessWindowStyle.Hidden,
                 CreateNoWindow = true,
                 UseShellExecute = false,
@@ -121,6 +130,10 @@ public partial class MainWindow : Window
             }
 
             ShowResult(success: true, Loc.T("uninst_Done", _installDir));
+            // Auto-close after 2 s so this process exits well before cmd.exe's rmdir runs
+            var t = new System.Windows.Threading.DispatcherTimer { Interval = TimeSpan.FromSeconds(2) };
+            t.Tick += (_, _) => { t.Stop(); Application.Current.Shutdown(); };
+            t.Start();
         }
         catch (Exception ex)
         {

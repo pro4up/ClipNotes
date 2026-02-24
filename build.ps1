@@ -201,23 +201,23 @@ if ($BuildSetup) {
             [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $srcPath, $entryName, [System.IO.Compression.CompressionLevel]::Fastest) | Out-Null
         }
         Get-ChildItem "$compileDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
-            & $addFile $_.FullName "ClipNotes\$($_.Name)"
+            & $addFile $_.FullName "ClipNotes/$($_.Name)"
         }
         if (Test-Path "$compileDir\tools") {
             Get-ChildItem "$compileDir\tools" -File | ForEach-Object {
-                & $addFile $_.FullName "ClipNotes\tools\$($_.Name)"
+                & $addFile $_.FullName "ClipNotes/tools/$($_.Name)"
             }
         }
         if (Test-Path "$compileDir\licenses") {
             Get-ChildItem "$compileDir\licenses" -File | ForEach-Object {
-                & $addFile $_.FullName "ClipNotes\licenses\$($_.Name)"
+                & $addFile $_.FullName "ClipNotes/licenses/$($_.Name)"
             }
         }
         if (Test-Path "$compileDir\lang") {
             $resolvedCompileDir = (Resolve-Path $compileDir).Path
             Get-ChildItem "$compileDir\lang" -Recurse -File | ForEach-Object {
-                $relPath = $_.FullName.Substring("$resolvedCompileDir\".Length)
-                & $addFile $_.FullName "ClipNotes\$relPath"
+                $relPath = $_.FullName.Substring("$resolvedCompileDir\".Length).Replace('\', '/')
+                & $addFile $_.FullName "ClipNotes/$relPath"
             }
         }
     } finally {
