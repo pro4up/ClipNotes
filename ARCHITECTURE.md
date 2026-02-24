@@ -56,12 +56,14 @@ C:\Projects\ClipNotes\
 │       ├── Converters\
 │       └── Helpers\
 │
-├── app\                           ← готовое приложение (dotnet publish output)
-│   ├── ClipNotes.exe
-│   ├── lang\                      ← локализация (ru/lang.json, en/lang.json, ...)
-│   ├── tools\                     ← ffmpeg.exe, ffprobe.exe, whisper-cli.exe + DLL
-│   ├── models\                    ← ggml-large-v3-turbo.bin
-│   └── licenses\
+├── app\                           ← корень сборки (build.ps1 output root)
+│   └── app\                       ← dotnet publish output (ClipNotes.exe + Uninstaller.exe)
+│       ├── ClipNotes.exe
+│       ├── ClipNotes.Uninstaller.exe
+│       ├── lang\                  ← локализация (ru/lang.json, en/lang.json, ...)
+│       ├── tools\                 ← ffmpeg.exe, ffprobe.exe, whisper-cli.exe + DLL
+│       ├── models\                ← ggml-large-v3-turbo.bin
+│       └── licenses\
 │
 └── sessions\                      ← данные записанных сессий (OutputDirectory)
     └── YYYY-MM-DD_HH-mm-ss\
@@ -266,7 +268,7 @@ WinAPI глобальные горячие клавиши.
 ### `LogService.cs`
 Статический класс логирования. Путь к лог-файлу определяется через `Process.GetCurrentProcess().MainModule?.FileName` (не `Assembly.Location` — при single-file publish он пустой).
 
-- Файлы: `AppDir/Logs/YYYY-MM-DD.log`
+- Файлы: `%APPDATA%\ClipNotes\logs\YYYY-MM-DD.log` (не рядом с exe — во избежание PermissionDenied в Program Files)
 - Методы: `Info`, `Warn`, `Error(message, ex?)`
 
 ### `LocalizationService.cs`
@@ -358,8 +360,15 @@ AppDir/lang/{code}/lang.json
 
 ```powershell
 .\build.ps1 [-SkipDependencies] [-SkipModel] [-Model <name>] [-Configuration <Release|Debug>]
-            [-BuildSetup]
+            [-BuildSetup] [-BuildOfflineSetup]
 ```
+
+| Флаг | Описание |
+|---|---|
+| `-SkipDependencies` | Не качать FFmpeg и whisper-cli (уже есть) |
+| `-SkipModel` | Не качать основную модель (уже есть) |
+| `-BuildSetup` | Собрать онлайн-установщик → `Setup/ClipNotes-Setup.exe` + `ClipNotes-bundle.zip` |
+| `-BuildOfflineSetup` | Собрать offline-установщик → `Setup/ClipNotes-Setup-Offline.exe` + `ClipNotes-offline-bundle.zip` (~6.5 ГБ, все модели) |
 
 ### `rebuild-installers.ps1` — пересборка установщика
 
@@ -379,8 +388,11 @@ AppDir/lang/{code}/lang.json
 
 ### ClipNotes.Uninstaller
 
-- Удаляет файлы приложения и ярлыки
-- Самоудаляется: `cmd /c timeout && del uninstaller.exe && rmdir`
+- WPF-приложение с диалогом подтверждения (кнопка «Удалить»)
+- Читает `InstallLocation` из реестра (`HKLM/HKCU\...\Uninstall\ClipNotes`)
+- Удаляет файлы приложения, ярлыки рабочего стола и меню «Пуск», ключ Run (автозапуск)
+- Самоудаление: `cmd /c ping 127.0.0.1 -n 8 & rmdir /s /q "<installDir>"` — удаляет корень после выхода процесса
+- Авто-закрытие через 2 секунды после успешного удаления
 - Запускается из установщика или «Программ и компонентов»
 
 **Шаги:**
@@ -487,10 +499,11 @@ WPF не предоставляет нативного API для глобаль
 - [x] Hold Mode визуальный индикатор (пульсирующий badge с таймером)
 - [x] Hold Mode через UI-кнопки (удержание ЛКМ)
 - [x] Маркер Summary (4-й тип, фиолетовый)
-- [x] Именование сессий (диалог ввода + авто-суффикс с форматом даты)
+- [x] Именование сессий (диалог ввода + авто-суффикс с датой: пресеты DM/MY/DMY/Custom)
 - [x] Кастомные пути для video/audio/txt/table (move/copy режимы)
 - [x] Авто-очистка маркеров при загрузке видео
 - [x] Импорт маркеров из JSON-файла
-- [x] rebuild-installers.ps1 (быстрая пересборка без перекачки зависимостей)
+- [x] Иерархия установки: `installDir/app/ClipNotes.exe` (все файлы приложения в `app/`)
+- [x] SHA256SUMS.txt для релизных артефактов
 - [ ] Unit-тесты (не реализованы)
 - [ ] Код-подпись exe (не настроена)
