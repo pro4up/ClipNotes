@@ -56,14 +56,14 @@ C:\Projects\ClipNotes\
 │       ├── Converters\
 │       └── Helpers\
 │
-├── app\                           ← корень сборки (build.ps1 output root)
-│   └── app\                       ← dotnet publish output (ClipNotes.exe + Uninstaller.exe)
-│       ├── ClipNotes.exe
-│       ├── ClipNotes.Uninstaller.exe
-│       ├── lang\                  ← локализация (ru/lang.json, en/lang.json, ...)
-│       ├── tools\                 ← ffmpeg.exe, ffprobe.exe, whisper-cli.exe + DLL
-│       ├── models\                ← ggml-large-v3-turbo.bin
-│       └── licenses\
+├── app\                           ← корень сборки (build.ps1 output root = installDir)
+│   ├── app\                       ← dotnet publish output (ClipNotes.exe + DLL + Uninstaller.exe)
+│   │   ├── ClipNotes.exe
+│   │   └── ClipNotes.Uninstaller.exe
+│   ├── lang\                      ← локализация (ru/lang.json, en/lang.json, ...)
+│   ├── tools\                     ← ffmpeg.exe, ffprobe.exe, whisper-cli.exe + DLL
+│   ├── models\                    ← ggml-large-v3-turbo.bin
+│   └── licenses\
 │
 └── sessions\                      ← данные записанных сессий (OutputDirectory)
     └── YYYY-MM-DD_HH-mm-ss\
@@ -266,10 +266,11 @@ WinAPI глобальные горячие клавиши.
 - `SaveSettings(AppSettings)` — сериализация с отступами
 
 ### `LogService.cs`
-Статический класс логирования. Путь к лог-файлу определяется через `Process.GetCurrentProcess().MainModule?.FileName` (не `Assembly.Location` — при single-file publish он пустой).
+Статический класс логирования. Путь к лог-файлу определяется через `%APPDATA%\ClipNotes\logs\`.
 
 - Файлы: `%APPDATA%\ClipNotes\logs\YYYY-MM-DD.log` (не рядом с exe — во избежание PermissionDenied в Program Files)
 - Методы: `Info`, `Warn`, `Error(message, ex?)`
+- `Error` вызывается во всех catch-блоках ViewModel (StartRecording, StopRecording, LoadExistingVideo, AddMarker, Generate)
 
 ### `LocalizationService.cs`
 Статический класс локализации. Загружает строки из `lang/{code}/lang.json` в `Application.Current.Resources`, откуда WPF подхватывает их через `{DynamicResource loc_XXX}`.
@@ -345,11 +346,11 @@ Apple-like минималистичный стиль:
 Определяет пути к внешним инструментам. `AppDir` вычисляется через `Process.GetCurrentProcess().MainModule?.FileName` (не `Assembly.Location` — при single-file publish он пустой).
 
 ```csharp
-AppDir/tools/ffmpeg.exe
-AppDir/tools/ffprobe.exe
-AppDir/tools/whisper-cli.exe
-AppDir/models/ggml-{model}.bin
-AppDir/lang/{code}/lang.json
+AppDir/../tools/ffmpeg.exe         // AppDir = installDir/app → tools at installDir/tools
+AppDir/../tools/ffprobe.exe
+AppDir/../tools/whisper-cli.exe
+AppDir/../models/ggml-{model}.bin  // models at installDir/models
+AppDir/../lang/{code}/lang.json    // lang at installDir/lang
 ```
 
 ---
@@ -391,7 +392,7 @@ AppDir/lang/{code}/lang.json
 - WPF-приложение с диалогом подтверждения (кнопка «Удалить»)
 - Читает `InstallLocation` из реестра (`HKLM/HKCU\...\Uninstall\ClipNotes`)
 - Удаляет файлы приложения, ярлыки рабочего стола и меню «Пуск», ключ Run (автозапуск)
-- Самоудаление: `cmd /c ping 127.0.0.1 -n 8 & rmdir /s /q "<installDir>"` — удаляет корень после выхода процесса
+- Самоудаление: `cmd /c timeout /t 4 & rmdir /s /q "<installDir>"` — удаляет корень после выхода процесса (UseShellExecute=true для наследования elevated-токена)
 - Авто-закрытие через 2 секунды после успешного удаления
 - Запускается из установщика или «Программ и компонентов»
 
@@ -503,7 +504,7 @@ WPF не предоставляет нативного API для глобаль
 - [x] Кастомные пути для video/audio/txt/table (move/copy режимы)
 - [x] Авто-очистка маркеров при загрузке видео
 - [x] Импорт маркеров из JSON-файла
-- [x] Иерархия установки: `installDir/app/ClipNotes.exe` (все файлы приложения в `app/`)
+- [x] Иерархия установки: `installDir/app/ClipNotes.exe` + `installDir/tools/` + `installDir/models/` + `installDir/lang/` (exe+dll в `app/`, инструменты/модели/локаль в корне)
 - [x] SHA256SUMS.txt для релизных артефактов
 - [ ] Unit-тесты (не реализованы)
 - [ ] Код-подпись exe (не настроена)
