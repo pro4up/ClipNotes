@@ -35,19 +35,21 @@ public class InstallerService
     public async Task InstallAsync(CancellationToken ct = default)
     {
         var installDir = _options.InstallPath;
-        var toolsDir   = Path.Combine(installDir, "tools");
-        var modelsDir  = Path.Combine(installDir, "models");
+        var appDir     = Path.Combine(installDir, "app");
+        var toolsDir   = Path.Combine(appDir, "tools");
+        var modelsDir  = Path.Combine(appDir, "models");
 
         // 1. Создать папки
         SetStep(Loc.T("inst_StepCreateDir"));
         Directory.CreateDirectory(installDir);
+        Directory.CreateDirectory(appDir);
         Directory.CreateDirectory(toolsDir);
         Directory.CreateDirectory(modelsDir);
         Log($"Dir: {installDir}");
 
 #if OFFLINE_BUILD
         SetStep(Loc.T("inst_StepExtractApp"));
-        await ExtractEmbeddedBundleAsync(installDir, toolsDir, ct);
+        await ExtractEmbeddedBundleAsync(installDir, appDir, toolsDir, ct);
 #else
         var localSrc = GetLocalSourceDir();
         if (localSrc != null)
@@ -57,7 +59,7 @@ public class InstallerService
         if (localSrc != null)
         {
             SetStep(Loc.T("inst_StepCopyApp"));
-            await CopyAppFilesAsync(localSrc, installDir, toolsDir, ct);
+            await CopyAppFilesAsync(localSrc, appDir, toolsDir, ct);
         }
         else
         {
@@ -104,7 +106,7 @@ public class InstallerService
 #endif
 
         // 6. Ярлыки (Desktop + Start Menu)
-        var exePath = Path.Combine(installDir, "ClipNotes.exe");
+        var exePath = Path.Combine(appDir, "ClipNotes.exe");
         if (_options.CreateDesktopShortcut)
         {
             SetStep(Loc.T("inst_StepShortcut"));
@@ -123,12 +125,12 @@ public class InstallerService
         if (_options.RunOnStartup)
         {
             SetStep(Loc.T("inst_StepStartup"));
-            SetStartupRegistry(Path.Combine(installDir, "ClipNotes.exe"));
+            SetStartupRegistry(exePath);
         }
 
         // 8. Регистрация
         SetStep(Loc.T("inst_StepRegister"));
-        RegisterUninstaller(installDir);
+        RegisterUninstaller(installDir, appDir);
 
         // 9. Сохранить язык в settings.json
         SaveLanguageToSettings();
@@ -172,10 +174,12 @@ public class InstallerService
             if (exePath == null) return null;
             var setupDir = Path.GetDirectoryName(exePath);
             if (setupDir == null) return null;
-            var candidate = Path.GetFullPath(Path.Combine(setupDir, "..", "app"));
-            return Directory.Exists(candidate)
-                   && File.Exists(Path.Combine(candidate, "ClipNotes.exe"))
-                ? candidate : null;
+            // Build root is at setupDir/../app; app files are in setupDir/../app/app/
+            var buildRoot  = Path.GetFullPath(Path.Combine(setupDir, "..", "app"));
+            var appSubDir  = Path.Combine(buildRoot, "app");
+            return Directory.Exists(appSubDir)
+                   && File.Exists(Path.Combine(appSubDir, "ClipNotes.exe"))
+                ? appSubDir : null;
         }
         catch { return null; }
     }
@@ -369,12 +373,14 @@ public class InstallerService
         return bundle;
     }
 
-    private async Task ExtractEmbeddedBundleAsync(string installDir, string toolsDir, CancellationToken ct)
+    private async Task ExtractEmbeddedBundleAsync(string installDir, string appDir, string toolsDir, CancellationToken ct)
     {
         var bundlePath = GetOfflineBundlePath();
         Log($"Offline bundle: {bundlePath}");
-        var modelsDir = Path.Combine(installDir, "models");
-        var licDir    = Path.Combine(installDir, "licenses");
+        var modelsDir = Path.Combine(appDir, "models");
+        var licDir    = Path.Combine(appDir, "licenses");
+        Directory.CreateDirectory(modelsDir);
+        Directory.CreateDirectory(licDir);
 
         using var archive = ZipFile.OpenRead(bundlePath);
         int count = archive.Entries.Count(e => e.Length > 0);
@@ -384,21 +390,23 @@ public class InstallerService
             if (entry.Length == 0) continue;
             ct.ThrowIfCancellationRequested();
 
-            var parts    = entry.FullName.Split('/');
+            // Normalize backslashes (Windows PowerShell may produce backslash ZIP entry names)
+            var normalizedName = entry.FullName.Replace('\\', '/');
+            var parts    = normalizedName.Split('/');
             var folder   = parts[0];
             var fileName = parts.Length > 1 ? parts[^1] : "";
             if (string.IsNullOrEmpty(fileName)) { i++; continue; }
 
             string? dest = folder switch
             {
-                "app"          => Path.Combine(installDir, fileName),
-                "tools"        => Path.Combine(toolsDir,   fileName),
+                "app"          => Path.Combine(appDir,    fileName),
+                "tools"        => Path.Combine(toolsDir,  fileName),
                 "whisper-cpu"  => _options.Backend == "cpu"  ? Path.Combine(toolsDir, fileName) : null,
                 "whisper-cuda" => _options.Backend == "cuda" ? Path.Combine(toolsDir, fileName) : null,
                 "models"       => Path.Combine(modelsDir, fileName),
                 "licenses"     => Path.Combine(licDir,    fileName),
                 "lang"         => parts.Length >= 3
-                                    ? Path.Combine(installDir, "lang", parts[1], fileName)
+                                    ? Path.Combine(appDir, "lang", parts[1], fileName)
                                     : null,
                 _              => null,
             };
@@ -444,19 +452,19 @@ public class InstallerService
         key?.SetValue("ClipNotes", $"\"{exePath}\" --tray");
     }
 
-    private static void RegisterUninstaller(string installDir)
+    private static void RegisterUninstaller(string installDir, string appDir)
     {
         void Write(RegistryKey root)
         {
             using var k = root.CreateSubKey(
                 @"Software\Microsoft\Windows\CurrentVersion\Uninstall\ClipNotes");
             if (k == null) return;
-            var uninstallerPath = Path.Combine(installDir, "ClipNotes.Uninstaller.exe");
+            var uninstallerPath = Path.Combine(appDir, "ClipNotes.Uninstaller.exe");
             k.SetValue("DisplayName",     "ClipNotes");
             k.SetValue("DisplayVersion",  "1.0.0");
             k.SetValue("Publisher",       "pro4up");
             k.SetValue("InstallLocation", installDir);
-            k.SetValue("DisplayIcon",     Path.Combine(installDir, "ClipNotes.exe"));
+            k.SetValue("DisplayIcon",     Path.Combine(appDir, "ClipNotes.exe"));
             k.SetValue("UninstallString", $"\"{uninstallerPath}\"");
             k.SetValue("NoModify",  1, RegistryValueKind.DWord);
             k.SetValue("NoRepair",  1, RegistryValueKind.DWord);

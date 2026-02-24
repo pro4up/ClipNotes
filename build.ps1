@@ -15,10 +15,11 @@ $scriptDir = $PSScriptRoot
 $sourceDir = "$scriptDir\ClipNotes"
 $setupSourceDir = "$scriptDir\ClipNotes.Setup"
 $compileDir = "$scriptDir\..\app"
+$appDir     = "$compileDir\app"       # ClipNotes.exe + Uninstaller.exe go here
 $setupOutputDir = "$scriptDir\..\Setup"
-$toolsOutputDir = "$compileDir\tools"
-$modelsOutputDir = "$compileDir\models"
-$licensesDir = "$compileDir\licenses"
+$toolsOutputDir = "$appDir\tools"
+$modelsOutputDir = "$appDir\models"
+$licensesDir = "$appDir\licenses"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "  ClipNotes Build System" -ForegroundColor Cyan
@@ -26,7 +27,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
 # Ensure output directories
-foreach ($dir in @($compileDir, $toolsOutputDir, $modelsOutputDir, $licensesDir)) {
+foreach ($dir in @($compileDir, $appDir, $toolsOutputDir, $modelsOutputDir, $licensesDir)) {
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
 }
 
@@ -65,7 +66,7 @@ dotnet publish "$sourceDir\ClipNotes.csproj" `
     --self-contained true `
     -p:PublishSingleFile=false `
     -p:IncludeNativeLibrariesForSelfExtract=false `
-    -o "$compileDir" `
+    -o "$appDir" `
     --nologo
 if ($LASTEXITCODE -ne 0) { throw "Build failed" }
 
@@ -77,7 +78,7 @@ if (Test-Path $uninstallerDir) {
         -c $Configuration `
         -r win-x64 --self-contained true `
         -p:PublishSingleFile=false `
-        -o "$compileDir" --nologo
+        -o "$appDir" --nologo
     if ($LASTEXITCODE -ne 0) { throw "Uninstaller build failed" }
 } else {
     Write-Host "  [skip] ClipNotes.Uninstaller project not found" -ForegroundColor DarkGray
@@ -200,24 +201,25 @@ if ($BuildSetup) {
             param($srcPath, $entryName)
             [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $srcPath, $entryName, [System.IO.Compression.CompressionLevel]::Fastest) | Out-Null
         }
-        Get-ChildItem "$compileDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
-            & $addFile $_.FullName "ClipNotes/$($_.Name)"
+        # All app files go under ClipNotes/app/ in the bundle
+        Get-ChildItem "$appDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
+            & $addFile $_.FullName "ClipNotes/app/$($_.Name)"
         }
-        if (Test-Path "$compileDir\tools") {
-            Get-ChildItem "$compileDir\tools" -File | ForEach-Object {
-                & $addFile $_.FullName "ClipNotes/tools/$($_.Name)"
+        if (Test-Path "$appDir\tools") {
+            Get-ChildItem "$appDir\tools" -File | ForEach-Object {
+                & $addFile $_.FullName "ClipNotes/app/tools/$($_.Name)"
             }
         }
-        if (Test-Path "$compileDir\licenses") {
-            Get-ChildItem "$compileDir\licenses" -File | ForEach-Object {
-                & $addFile $_.FullName "ClipNotes/licenses/$($_.Name)"
+        if (Test-Path "$appDir\licenses") {
+            Get-ChildItem "$appDir\licenses" -File | ForEach-Object {
+                & $addFile $_.FullName "ClipNotes/app/licenses/$($_.Name)"
             }
         }
-        if (Test-Path "$compileDir\lang") {
-            $resolvedCompileDir = (Resolve-Path $compileDir).Path
-            Get-ChildItem "$compileDir\lang" -Recurse -File | ForEach-Object {
-                $relPath = $_.FullName.Substring("$resolvedCompileDir\".Length).Replace('\', '/')
-                & $addFile $_.FullName "ClipNotes/$relPath"
+        if (Test-Path "$appDir\lang") {
+            $resolvedAppDir = (Resolve-Path $appDir).Path
+            Get-ChildItem "$appDir\lang" -Recurse -File | ForEach-Object {
+                $relPath = $_.FullName.Substring("$resolvedAppDir\".Length).Replace('\', '/')
+                & $addFile $_.FullName "ClipNotes/app/$relPath"
             }
         }
     } finally {
@@ -282,54 +284,54 @@ if ($BuildOfflineSetup) {
             [System.IO.Compression.ZipFileExtensions]::CreateEntryFromFile($zip, $srcPath, $entryName, [System.IO.Compression.CompressionLevel]::Fastest) | Out-Null
         }
 
-        # app/ — исполняемые файлы приложения
-        Get-ChildItem "$compileDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
-            & $addFile $_.FullName "app\$($_.Name)"
+        # app/ — app + uninstaller exe/dll from $appDir (forward slashes for ZIP compatibility)
+        Get-ChildItem "$appDir" -File | Where-Object { $_.Extension -in '.exe','.dll','.json' } | ForEach-Object {
+            & $addFile $_.FullName "app/$($_.Name)"
         }
 
         # tools/ — только FFmpeg
         @("ffmpeg.exe", "ffprobe.exe") | ForEach-Object {
             $f = Join-Path $toolsOutputDir $_
-            if (Test-Path $f) { & $addFile $f "tools\$_" }
+            if (Test-Path $f) { & $addFile $f "tools/$_" }
         }
 
         # whisper-cpu/ — CPU бэкенд whisper
         if (Test-Path $toolsOutputDir) {
             Get-ChildItem $toolsOutputDir -File | Where-Object { $_.Name -notin @("ffmpeg.exe","ffprobe.exe") } | ForEach-Object {
-                Write-Host "    + whisper-cpu\$($_.Name)" -ForegroundColor DarkGray
-                & $addFile $_.FullName "whisper-cpu\$($_.Name)"
+                Write-Host "    + whisper-cpu/$($_.Name)" -ForegroundColor DarkGray
+                & $addFile $_.FullName "whisper-cpu/$($_.Name)"
             }
         }
 
         # whisper-cuda/ — CUDA бэкенд whisper
         if (Test-Path $cudaTempDir) {
             Get-ChildItem $cudaTempDir -File | ForEach-Object {
-                Write-Host "    + whisper-cuda\$($_.Name)" -ForegroundColor DarkGray
-                & $addFile $_.FullName "whisper-cuda\$($_.Name)"
+                Write-Host "    + whisper-cuda/$($_.Name)" -ForegroundColor DarkGray
+                & $addFile $_.FullName "whisper-cuda/$($_.Name)"
             }
         }
 
         # models/ — все whisper-модели
         if (Test-Path $modelsOutputDir) {
             Get-ChildItem $modelsOutputDir -File | ForEach-Object {
-                Write-Host "    + models\$($_.Name)" -ForegroundColor DarkGray
-                & $addFile $_.FullName "models\$($_.Name)"
+                Write-Host "    + models/$($_.Name)" -ForegroundColor DarkGray
+                & $addFile $_.FullName "models/$($_.Name)"
             }
         }
 
         # licenses/
-        if (Test-Path "$compileDir\licenses") {
-            Get-ChildItem "$compileDir\licenses" -File | ForEach-Object {
-                & $addFile $_.FullName "licenses\$($_.Name)"
+        if (Test-Path "$appDir\licenses") {
+            Get-ChildItem "$appDir\licenses" -File | ForEach-Object {
+                & $addFile $_.FullName "licenses/$($_.Name)"
             }
         }
 
         # lang/ — локализация (lang/ru/lang.json, lang/en/lang.json, ...)
-        if (Test-Path "$compileDir\lang") {
-            $resolvedLangDir = (Resolve-Path "$compileDir\lang").Path
-            Get-ChildItem "$compileDir\lang" -Recurse -File | ForEach-Object {
-                $relPath = $_.FullName.Substring("$resolvedLangDir\".Length)
-                & $addFile $_.FullName "lang\$relPath"
+        if (Test-Path "$appDir\lang") {
+            $resolvedLangDir = (Resolve-Path "$appDir\lang").Path
+            Get-ChildItem "$appDir\lang" -Recurse -File | ForEach-Object {
+                $relPath = $_.FullName.Substring("$resolvedLangDir\".Length).Replace('\', '/')
+                & $addFile $_.FullName "lang/$relPath"
             }
         }
     } finally {
@@ -382,27 +384,28 @@ Write-Host "========================================" -ForegroundColor Green
 Write-Host "  Build Complete!" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Green
 Write-Host ""
-Write-Host "Output directory: $compileDir" -ForegroundColor White
+Write-Host "Output root: $compileDir" -ForegroundColor White
+Write-Host "App dir:     $appDir" -ForegroundColor White
 Write-Host ""
 Write-Host "Contents:" -ForegroundColor White
-if (Test-Path "$compileDir\ClipNotes.exe") { Write-Host "  [OK] ClipNotes.exe" -ForegroundColor Green }
-else { Write-Host "  [!!] ClipNotes.exe MISSING" -ForegroundColor Red }
+if (Test-Path "$appDir\ClipNotes.exe") { Write-Host "  [OK] app\ClipNotes.exe" -ForegroundColor Green }
+else { Write-Host "  [!!] app\ClipNotes.exe MISSING" -ForegroundColor Red }
 
-if (Test-Path "$toolsOutputDir\ffmpeg.exe") { Write-Host "  [OK] tools\ffmpeg.exe" -ForegroundColor Green }
-else { Write-Host "  [!!] tools\ffmpeg.exe MISSING" -ForegroundColor Red }
+if (Test-Path "$toolsOutputDir\ffmpeg.exe") { Write-Host "  [OK] app\tools\ffmpeg.exe" -ForegroundColor Green }
+else { Write-Host "  [!!] app\tools\ffmpeg.exe MISSING" -ForegroundColor Red }
 
-if (Test-Path "$toolsOutputDir\ffprobe.exe") { Write-Host "  [OK] tools\ffprobe.exe" -ForegroundColor Green }
-else { Write-Host "  [!!] tools\ffprobe.exe MISSING" -ForegroundColor Red }
+if (Test-Path "$toolsOutputDir\ffprobe.exe") { Write-Host "  [OK] app\tools\ffprobe.exe" -ForegroundColor Green }
+else { Write-Host "  [!!] app\tools\ffprobe.exe MISSING" -ForegroundColor Red }
 
-if (Test-Path "$toolsOutputDir\whisper-cli.exe") { Write-Host "  [OK] tools\whisper-cli.exe" -ForegroundColor Green }
-else { Write-Host "  [!!] tools\whisper-cli.exe MISSING" -ForegroundColor Red }
+if (Test-Path "$toolsOutputDir\whisper-cli.exe") { Write-Host "  [OK] app\tools\whisper-cli.exe" -ForegroundColor Green }
+else { Write-Host "  [!!] app\tools\whisper-cli.exe MISSING" -ForegroundColor Red }
 
-if (Test-Path "$compileDir\ClipNotes.Uninstaller.exe") { Write-Host "  [OK] ClipNotes.Uninstaller.exe" -ForegroundColor Green }
-else { Write-Host "  [!!] ClipNotes.Uninstaller.exe MISSING" -ForegroundColor Yellow }
+if (Test-Path "$appDir\ClipNotes.Uninstaller.exe") { Write-Host "  [OK] app\ClipNotes.Uninstaller.exe" -ForegroundColor Green }
+else { Write-Host "  [!!] app\ClipNotes.Uninstaller.exe MISSING" -ForegroundColor Yellow }
 
 $modelFile = Get-ChildItem -Path $modelsOutputDir -Filter "ggml-*.bin" -ErrorAction SilentlyContinue | Select-Object -First 1
-if ($modelFile) { Write-Host "  [OK] models\$($modelFile.Name)" -ForegroundColor Green }
+if ($modelFile) { Write-Host "  [OK] app\models\$($modelFile.Name)" -ForegroundColor Green }
 else { Write-Host "  [!!] Model file MISSING" -ForegroundColor Red }
 
-Write-Host "  [OK] licenses\" -ForegroundColor Green
+Write-Host "  [OK] app\licenses\" -ForegroundColor Green
 Write-Host ""
