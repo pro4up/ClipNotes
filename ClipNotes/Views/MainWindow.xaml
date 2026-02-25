@@ -740,40 +740,41 @@
                                                VerticalAlignment="Center" FontWeight="SemiBold"/>
                                 </StackPanel>
 
-                                <!-- Check for updates row -->
+                                <!-- Check / Install row — buttons swap in place -->
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center" Margin="0,0,0,10">
+                                    <!-- "Check for Updates" — hidden once update is found -->
                                     <Button Content="{DynamicResource loc_BtnCheckUpdates}"
                                             Command="{Binding CheckForUpdatesCommand}"
                                             IsEnabled="{Binding IsCheckingUpdate, Converter={StaticResource InverseBool}}"
                                             Style="{StaticResource PrimaryButton}"
-                                            Padding="14,6" Margin="0,0,12,0"/>
+                                            Padding="14,6" Margin="0,0,12,0"
+                                            Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolToVis}, ConverterParameter=Invert}"/>
+                                    <!-- "Install / Restart" — replaces Check button when update available -->
+                                    <Button Command="{Binding InstallUpdateCommand}"
+                                            IsEnabled="{Binding IsDownloadingUpdate, Converter={StaticResource InverseBool}}"
+                                            Style="{StaticResource PrimaryButton}"
+                                            Padding="14,6" Margin="0,0,12,0"
+                                            Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolToVis}}">
+                                        <Button.Content>
+                                            <TextBlock>
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock" BasedOn="{StaticResource BaseText}">
+                                                        <Setter Property="Text" Value="{DynamicResource loc_BtnInstallUpdate}"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsUpdateReady}" Value="True">
+                                                                <Setter Property="Text" Value="{DynamicResource loc_BtnRestartToApply}"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                        </Button.Content>
+                                    </Button>
                                     <TextBlock Text="{Binding UpdateStatus}"
                                                Style="{StaticResource Label}"
                                                VerticalAlignment="Center"
                                                TextWrapping="Wrap" MaxWidth="320"/>
                                 </StackPanel>
-
-                                <!-- Install / Restart button (visible when update is available) -->
-                                <Button Command="{Binding InstallUpdateCommand}"
-                                        IsEnabled="{Binding IsDownloadingUpdate, Converter={StaticResource InverseBool}}"
-                                        Style="{StaticResource PrimaryButton}"
-                                        Padding="14,6"
-                                        Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolToVis}}">
-                                    <Button.Content>
-                                        <TextBlock>
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock" BasedOn="{StaticResource BaseText}">
-                                                    <Setter Property="Text" Value="{DynamicResource loc_BtnInstallUpdate}"/>
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsUpdateReady}" Value="True">
-                                                            <Setter Property="Text" Value="{DynamicResource loc_BtnRestartToApply}"/>
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </Button.Content>
-                                </Button>
                             </StackPanel>
                         </Border>
 
