@@ -188,8 +188,9 @@ public partial class MainViewModel : ObservableObject
         SetupToolPaths();
         ValidateTools();
 
-        // Автозапуск OBS.exe если включено
-        if (AutoStartObs && File.Exists(ObsExePath))
+        // Автозапуск OBS.exe если включено — validate extension to prevent launching arbitrary files.
+        if (AutoStartObs && File.Exists(ObsExePath)
+            && string.Equals(Path.GetExtension(ObsExePath), ".exe", StringComparison.OrdinalIgnoreCase))
             Process.Start(new ProcessStartInfo(ObsExePath) { UseShellExecute = true });
 
         // Авто-подключение OBS если настройки заполнены

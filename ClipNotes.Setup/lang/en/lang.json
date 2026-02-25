@@ -68,6 +68,7 @@
   "inst_StepExtractApp":       "Extracting application files...",
   "inst_StepCopyApp":          "Copying application files...",
   "inst_StepDownloadApp":      "Downloading ClipNotes...",
+  "inst_StepVerify":           "Verifying integrity...",
   "inst_StepDownloadFfmpeg":   "Downloading FFmpeg...",
   "inst_StepDownloadWhisper":  "Downloading whisper-cli ({0})...",
   "inst_StepCopyModel":        "Copying model {0}...",

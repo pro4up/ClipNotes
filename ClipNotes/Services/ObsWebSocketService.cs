@@ -203,6 +203,8 @@ public class ObsWebSocketService : IDisposable
         await _ws.SendAsync(bytes, WebSocketMessageType.Text, true, ct);
     }
 
+    private const int MaxMessageBytes = 64 * 1024 * 1024; // 64 MB — hard cap against malicious/runaway OBS
+
     private async Task<JsonNode?> ReceiveMessageAsync(CancellationToken ct)
     {
         if (_ws == null) return null;
@@ -213,6 +215,9 @@ public class ObsWebSocketService : IDisposable
         {
             result = await _ws.ReceiveAsync(buffer, ct);
             ms.Write(buffer, 0, result.Count);
+            if (ms.Length > MaxMessageBytes)
+                throw new InvalidOperationException(
+                    $"OBS WebSocket message exceeded size limit ({MaxMessageBytes / 1_048_576} MB)");
         } while (!result.EndOfMessage);
 
         var json = Encoding.UTF8.GetString(ms.ToArray());

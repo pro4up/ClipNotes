@@ -12,6 +12,8 @@ public static class LocalizationService
     private static string _currentLang = "ru";
     public static string CurrentLang => _currentLang;
 
+    private const long MaxLangFileBytes = 100 * 1024; // 100 KB — lang files are small text dictionaries
+
     /// <summary>Загружает язык. При отсутствии файла — fallback на "en".</summary>
     public static void Load(string lang)
     {
@@ -24,6 +26,14 @@ public static class LocalizationService
 
         try
         {
+            // Reject oversized lang files — protects against crafted replacements in lang/ directory.
+            if (new FileInfo(path).Length > MaxLangFileBytes)
+            {
+                ClipNotes.Services.LogService.Warn(
+                    $"LocalizationService: lang file '{path}' exceeds size limit, skipped.");
+                return;
+            }
+
             var json = File.ReadAllText(path);
             var dict = JsonSerializer.Deserialize<Dictionary<string, string>>(json);
             if (dict == null) return;
@@ -47,6 +57,9 @@ public static class LocalizationService
         if (!Directory.Exists(langDir)) return ["ru"];
         return Directory.GetDirectories(langDir)
             .Select(d => Path.GetFileName(d)!)
+            // Accept only valid BCP-47-style lang codes (2-5 lowercase letters, optional region tag)
+            // to prevent loading files from attacker-controlled directories.
+            .Where(s => System.Text.RegularExpressions.Regex.IsMatch(s, @"^[a-z]{2,3}(-[A-Z]{2})?$"))
             .OrderBy(s => s)
             .ToList();
     }

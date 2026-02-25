@@ -45,12 +45,30 @@ Write-Host "[Model] Downloading $fileName from Hugging Face..."
 Write-Host "[Model] URL: $url"
 Write-Host "[Model] This may take several minutes for large models..."
 
+# Known minimum sizes (MB) per model — used for sanity check after download.
+# Full expected sizes: base~142, small~461, medium~1533, large-v3~3094, large-v3-turbo~809
+$minSizeMB = switch ($ModelName.ToLower()) {
+    "base"           { 100 }
+    "small"          { 300 }
+    "medium"         { 1000 }
+    "large-v3"       { 2000 }
+    "large-v3-turbo" { 500 }
+    default          { 50 }
+}
+
 # Use .NET WebClient for better progress on large files
 $webClient = New-Object System.Net.WebClient
 try {
     $webClient.DownloadFile($url, $outputPath)
-    $size = (Get-Item $outputPath).Length / 1MB
-    Write-Host "[Model] Downloaded $fileName ($([int]$size) MB)"
+    $sizeMB = (Get-Item $outputPath).Length / 1MB
+    Write-Host "[Model] Downloaded $fileName ($([int]$sizeMB) MB)"
+
+    # Minimum size check — catches truncated or completely wrong files.
+    if ($sizeMB -lt $minSizeMB) {
+        Remove-Item $outputPath -Force
+        throw "[Model] Downloaded file too small: $([int]$sizeMB) MB (expected >= $minSizeMB MB). Possible download error or tampering."
+    }
+    Write-Host "[Model] Size check OK ($([int]$sizeMB) MB >= $minSizeMB MB minimum)."
 } catch {
     Write-Host "[Model] Failed to download: $_"
     Write-Host "[Model] You can manually download from: $url"

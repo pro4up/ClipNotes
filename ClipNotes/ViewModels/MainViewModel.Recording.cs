@@ -98,8 +98,8 @@ public partial class MainViewModel
                 _currentSession.ObsOutputPath = outputPath;
                 _currentSession.Markers = Markers.ToList();
 
-                // Move video file
-                if (!string.IsNullOrEmpty(outputPath))
+                // Move video file — validate path from OBS to prevent UNC/traversal exploitation.
+                if (!string.IsNullOrEmpty(outputPath) && IsLocalPath(outputPath))
                 {
                     RecordingStatus = Loc.T("loc_StatusMovingVideo");
                     var videoPath = await _sessionService.MoveVideoToSession(
@@ -108,6 +108,10 @@ public partial class MainViewModel
                         _currentSession.EffectiveVideoDir);
                     _currentSession.VideoFilePath = videoPath;
                     CopyToCustomPaths(_currentSession); // copy video to custom path if copy mode
+                }
+                else if (!string.IsNullOrEmpty(outputPath))
+                {
+                    LogSvc.Warn($"StopRecording: OBS returned non-local output path '{outputPath}', ignoring.");
                 }
 
                 // Get duration

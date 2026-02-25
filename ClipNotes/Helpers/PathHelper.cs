@@ -19,8 +19,16 @@ public static class PathHelper
 
     public static string ModelsDir => Path.Combine(RootDir, "models");
 
+    // Allowlist of supported model names — rejects path-traversal or arbitrary names from settings.json.
+    private static readonly HashSet<string> AllowedModelNames = new(StringComparer.OrdinalIgnoreCase)
+    {
+        "base", "small", "medium", "large-v3", "large-v3-turbo"
+    };
+
     public static string GetModelPath(string modelName)
     {
+        if (!AllowedModelNames.Contains(modelName))
+            modelName = "large-v3-turbo"; // safe default — unknown model names rejected
         var fileName = $"ggml-{modelName}.bin";
         return Path.Combine(ModelsDir, fileName);
     }

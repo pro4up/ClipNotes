@@ -93,8 +93,9 @@ public class SettingsService
         // Defensive: ensure no plaintext password leaks (ObsPassword is [JsonIgnore], but be safe).
         node.Remove("ObsPassword");
 
-        // Write to temp file first, then atomically replace — prevents partial-write corruption on crash.
-        var tmp = SettingsPath + ".tmp";
+        // Write to GUID-named temp file first, then atomically replace.
+        // GUID name narrows the race window vs a predictable ".tmp" suffix.
+        var tmp = Path.Combine(Path.GetDirectoryName(SettingsPath)!, $".settings_{Guid.NewGuid():N}.tmp");
         File.WriteAllText(tmp, node.ToJsonString(JsonOptions));
         File.Move(tmp, SettingsPath, overwrite: true);
     }
@@ -115,6 +116,22 @@ public class SettingsService
             var clean = SanitizePath(raw);
             if (clean != raw)
                 node[key] = clean; // replace with sanitized value (or null → removes key)
+        }
+
+        // Sanitize FolderPath inside each SessionHistory entry.
+        // ClearHistory may call Directory.Delete on these values; a manipulated settings.json
+        // could otherwise point them at arbitrary directories.
+        var history = node["SessionHistory"]?.AsArray();
+        if (history != null)
+        {
+            foreach (var item in history)
+            {
+                if (item is not JsonObject entry) continue;
+                var raw = entry["FolderPath"]?.GetValue<string>();
+                if (raw == null) continue;
+                var clean = SanitizePath(raw);
+                if (clean != raw) entry["FolderPath"] = clean;
+            }
         }
     }
 

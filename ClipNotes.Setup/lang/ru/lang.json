@@ -68,6 +68,7 @@
   "inst_StepExtractApp":       "Распаковка файлов приложения...",
   "inst_StepCopyApp":          "Копирование файлов приложения...",
   "inst_StepDownloadApp":      "Загрузка ClipNotes...",
+  "inst_StepVerify":           "Проверка целостности...",
   "inst_StepDownloadFfmpeg":   "Загрузка FFmpeg...",
   "inst_StepDownloadWhisper":  "Загрузка whisper-cli ({0})...",
   "inst_StepCopyModel":        "Копирование модели {0}...",

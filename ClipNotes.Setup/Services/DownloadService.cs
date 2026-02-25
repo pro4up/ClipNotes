@@ -20,12 +20,18 @@ public class DownloadService
         string url,
         string destPath,
         IProgress<DownloadProgress>? progress = null,
-        CancellationToken ct = default)
+        CancellationToken ct = default,
+        long maxBytes = 2L * 1024 * 1024 * 1024) // 2 GB default cap
     {
         using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
         response.EnsureSuccessStatusCode();
 
         long total = response.Content.Headers.ContentLength ?? -1;
+
+        // Reject if Content-Length already exceeds limit
+        if (maxBytes > 0 && total > maxBytes)
+            throw new InvalidOperationException(
+                $"Remote file too large: {total / 1_048_576.0:F0} MB (limit {maxBytes / 1_048_576} MB)");
 
         Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
 
@@ -42,6 +48,11 @@ public class DownloadService
         {
             await dst.WriteAsync(buffer.AsMemory(0, read), ct);
             downloaded += read;
+
+            // Enforce streaming size cap even when Content-Length is absent
+            if (maxBytes > 0 && downloaded > maxBytes)
+                throw new InvalidOperationException(
+                    $"Download exceeded size limit ({maxBytes / 1_048_576} MB): {url}");
 
             if (progress != null && sw.ElapsedMilliseconds > 250)
             {

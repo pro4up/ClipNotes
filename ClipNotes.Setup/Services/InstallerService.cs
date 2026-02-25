@@ -20,6 +20,8 @@ public class InstallerService
 
     public const string AppReleaseUrl =
         "https://github.com/pro4up/ClipNotes/releases/latest/download/ClipNotes-bundle.zip";
+    private const string AppSha256SumsUrl =
+        "https://github.com/pro4up/ClipNotes/releases/latest/download/SHA256SUMS.txt";
     private const string FfmpegUrl =
         "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip";
     private const string WhisperCpuUrl =
@@ -28,6 +30,12 @@ public class InstallerService
         "https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-cublas-12.4.0-bin-x64.zip";
     private const string ModelBaseUrl =
         "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/";
+
+    // Sanity bounds for third-party downloads (not cryptographic, but catch obviously wrong files).
+    private const long FfmpegMinBytes   =  40L * 1024 * 1024; //  40 MB minimum
+    private const long FfmpegMaxBytes   = 400L * 1024 * 1024; // 400 MB maximum
+    private const long WhisperMinBytes  =   5L * 1024 * 1024; //   5 MB minimum
+    private const long WhisperMaxBytes  = 500L * 1024 * 1024; // 500 MB maximum
 
     public InstallerService(InstallOptions options)
     {
@@ -72,13 +80,15 @@ public class InstallerService
             SetStep(Loc.T("inst_StepDownloadFfmpeg"));
             await DownloadAndExtractZipAsync(FfmpegUrl, toolsDir, "ffmpeg", ct,
                 entry => (entry.Name == "ffmpeg.exe" || entry.Name == "ffprobe.exe")
-                         && entry.FullName.Contains("bin/"));
+                         && entry.FullName.Contains("bin/"),
+                minBytes: FfmpegMinBytes, maxBytes: FfmpegMaxBytes);
 
             // 4. whisper-cli
             SetStep(Loc.T("inst_StepDownloadWhisper", _options.Backend.ToUpper()));
             var whisperUrl = _options.Backend == "cuda" ? WhisperCudaUrl : WhisperCpuUrl;
             await DownloadAndExtractZipAsync(whisperUrl, toolsDir, "whisper", ct,
-                entry => entry.Name == "whisper-cli.exe" || entry.Name.EndsWith(".dll"));
+                entry => entry.Name == "whisper-cli.exe" || entry.Name.EndsWith(".dll"),
+                minBytes: WhisperMinBytes, maxBytes: WhisperMaxBytes);
         }
 
         // 5. Модель
@@ -162,8 +172,14 @@ public class InstallerService
                 obj = new JsonObject();
             }
 
-            obj["Language"]         = _options.Language;
-            obj["WhisperModel"]     = _options.Model;
+            // Allowlist Language and Model before writing to settings.json — the values come from
+            // the options temp file in UAC-elevated mode, so validate before persisting.
+            var validLangs   = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "ru", "en" };
+            var validModels  = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+                { "base", "small", "medium", "large-v3", "large-v3-turbo" };
+
+            obj["Language"]         = validLangs.Contains(_options.Language) ? _options.Language : "en";
+            obj["WhisperModel"]     = validModels.Contains(_options.Model) ? _options.Model : "large-v3-turbo";
             obj["StartWithWindows"] = _options.RunOnStartup;
             File.WriteAllText(settingsPath, obj.ToJsonString());
         }
@@ -280,12 +296,62 @@ public class InstallerService
 
     // ── Скачивание ──────────────────────────────────────────────────────────
 
+    // Fetches SHA256SUMS.txt from our release and verifies the downloaded bundle.
+    private async Task VerifyAppBundleSha256Async(string zipPath, CancellationToken ct)
+    {
+        var tempSums = Path.GetTempFileName();
+        try
+        {
+            Log("[SHA256] Fetching SHA256SUMS.txt...");
+            await _download.DownloadWithProgressAsync(AppSha256SumsUrl, tempSums, null, ct,
+                maxBytes: 64 * 1024); // SHA256SUMS is a tiny text file
+
+            var lines = File.ReadAllLines(tempSums);
+            // Format: "HASH  filename" (sha256sum standard)
+            var expected = lines
+                .Select(l => l.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries))
+                .Where(p => p.Length >= 2 &&
+                            p[1].Equals("ClipNotes-bundle.zip", StringComparison.OrdinalIgnoreCase))
+                .Select(p => p[0].ToUpperInvariant())
+                .FirstOrDefault();
+
+            if (expected == null)
+            {
+                Log("[SHA256] WARNING: ClipNotes-bundle.zip not found in SHA256SUMS.txt — skipping hash check.");
+                return;
+            }
+
+            Log("[SHA256] Computing hash of downloaded bundle...");
+            string actual;
+            using (var sha256 = System.Security.Cryptography.SHA256.Create())
+            using (var fs = File.OpenRead(zipPath))
+            {
+                actual = BitConverter.ToString(await Task.Run(() => sha256.ComputeHash(fs), ct))
+                    .Replace("-", "").ToUpperInvariant();
+            }
+
+            if (actual != expected)
+                throw new InvalidOperationException(
+                    $"ClipNotes bundle SHA-256 mismatch!\nExpected: {expected}\nGot:      {actual}");
+
+            Log("[SHA256] ClipNotes bundle verified OK.");
+        }
+        finally
+        {
+            if (File.Exists(tempSums)) File.Delete(tempSums);
+        }
+    }
+
     private async Task DownloadAppAsync(string installDir, CancellationToken ct)
     {
         var tempZip = Path.GetTempFileName() + ".zip";
         try
         {
             await DownloadFileAsync(AppReleaseUrl, tempZip, "ClipNotes", ct);
+
+            // Verify integrity before extracting — supply chain protection for our own bundle.
+            SetStep(Loc.T("inst_StepVerify"));
+            await VerifyAppBundleSha256Async(tempZip, ct);
             SetStep(Loc.T("inst_StepExtract", "ClipNotes"));
 
             using var archive = ZipFile.OpenRead(tempZip);
@@ -341,12 +407,23 @@ public class InstallerService
 
     private async Task DownloadAndExtractZipAsync(
         string url, string destDir, string label, CancellationToken ct,
-        Func<ZipArchiveEntry, bool>? extractFilter = null)
+        Func<ZipArchiveEntry, bool>? extractFilter = null,
+        long minBytes = 0, long maxBytes = 0)
     {
         var tempZip = Path.GetTempFileName() + ".zip";
         try
         {
-            await DownloadFileAsync(url, tempZip, label, ct);
+            await _download.DownloadWithProgressAsync(url, tempZip,
+                new Progress<DownloadProgress>(p => ProgressChanged?.Invoke(p.Percent, p.Details)),
+                ct, maxBytes: maxBytes);
+
+            // Sanity-check downloaded file size
+            var fileSize = new FileInfo(tempZip).Length;
+            if (minBytes > 0 && fileSize < minBytes)
+                throw new InvalidOperationException(
+                    $"{label}: downloaded file too small ({fileSize / 1_048_576.0:F1} MB, expected ≥{minBytes / 1_048_576} MB)");
+
+            SetStep(Loc.T("inst_StepExtract", label));
             SetStep(Loc.T("inst_StepExtract", label));
 
             Directory.CreateDirectory(destDir);

@@ -76,7 +76,10 @@ public partial class MainViewModel
             {
                 try
                 {
-                    if (Directory.Exists(entry.FolderPath))
+                    // Validate path before deletion — settings.json FolderPath values could be
+                    // manipulated; IsLocalPath rejects UNC, relative, and empty paths.
+                    if (!string.IsNullOrEmpty(entry.FolderPath) && IsLocalPath(entry.FolderPath)
+                        && Directory.Exists(entry.FolderPath))
                         Directory.Delete(entry.FolderPath, true);
                 }
                 catch (Exception ex) { LogSvc.Warn($"ClearHistory delete failed: {ex.Message}"); }

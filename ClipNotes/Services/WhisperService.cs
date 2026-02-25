@@ -73,7 +73,11 @@ public class WhisperService
         var stderr = stderrTask.Result;
 
         if (process.ExitCode != 0)
-            throw new InvalidOperationException($"whisper-cli error (exit {process.ExitCode}): {stderr}");
+        {
+            // Truncate stderr — it may contain internal paths; limit to last 500 chars for UI display.
+            var stderrSnippet = stderr.Length > 500 ? "..." + stderr[^500..] : stderr;
+            throw new InvalidOperationException($"whisper-cli error (exit {process.ExitCode}): {stderrSnippet}");
+        }
 
         return stdout;
     }
