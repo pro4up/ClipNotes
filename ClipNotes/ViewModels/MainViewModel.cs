@@ -129,6 +129,7 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private int _selectedThemeIndex; // 0=Light, 1=Dark
     private bool _themeSetByUser;
     private bool _settingsLoaded;
+    private bool _loadingSettings; // true during LoadSettings — suppresses SaveSettings side effects
 
     // --- Updates ---
     [ObservableProperty] private string _updateStatus = "";

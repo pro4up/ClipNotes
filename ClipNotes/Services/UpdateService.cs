@@ -31,8 +31,9 @@ public class UpdateService
         "https://api.github.com/repos/pro4up/ClipNotes/releases/latest";
     private const string Sha256SumsUrl =
         "https://github.com/pro4up/ClipNotes/releases/latest/download/SHA256SUMS.txt";
-    private const long MaxSumsBytes   = 64 * 1024;          // SHA256SUMS.txt is always tiny
-    private const long MaxBundleBytes = 500L * 1024 * 1024; // 500 MB hard cap
+    private const long MaxApiResponseBytes = 1L * 1024 * 1024;  // 1 MB — GitHub API JSON is < 100 KB
+    private const long MaxSumsBytes        = 64 * 1024;          // SHA256SUMS.txt is always tiny
+    private const long MaxBundleBytes      = 500L * 1024 * 1024; // 500 MB hard cap
 
     /// <summary>Returns the current app version from the assembly manifest.</summary>
     public static string CurrentVersion =>
@@ -48,7 +49,7 @@ public class UpdateService
     {
         var current = CurrentVersion;
 
-        var json = await _http.GetStringAsync(ApiUrl, ct);
+        var json = await FetchStringWithLimitAsync(ApiUrl, MaxApiResponseBytes, ct);
         var node = JsonNode.Parse(json)
             ?? throw new InvalidOperationException("GitHub API returned invalid JSON");
 
@@ -223,18 +224,57 @@ public class UpdateService
         try
         {
             using var req  = new HttpRequestMessage(HttpMethod.Get, Sha256SumsUrl);
-            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseContentRead, ct);
+            using var resp = await _http.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, ct);
             if (!resp.IsSuccessStatusCode) return null;
 
             if (resp.Content.Headers.ContentLength > MaxSumsBytes) return null;
 
-            var text = await resp.Content.ReadAsStringAsync(ct);
-            return ParseBundleHash(text);
+            // Use stream-based reading with a hard cap to protect against missing Content-Length
+            await using var stream = await resp.Content.ReadAsStreamAsync(ct);
+            using var ms = new MemoryStream();
+            var buf = new byte[4096];
+            long totalRead = 0;
+            int read;
+            while ((read = await stream.ReadAsync(buf, ct)) > 0)
+            {
+                totalRead += read;
+                if (totalRead > MaxSumsBytes) return null; // abort silently if too large
+                ms.Write(buf, 0, read);
+            }
+            return ParseBundleHash(Encoding.UTF8.GetString(ms.ToArray()));
         }
         catch { return null; }
     }
 
-    private static string? ParseBundleUrl(JsonNode releaseNode)
+    /// <summary>
+    /// Fetches text from <paramref name="url"/> with a hard cap on response size.
+    /// Protects against unbounded reads when the server omits Content-Length (chunked encoding).
+    /// </summary>
+    private static async Task<string> FetchStringWithLimitAsync(string url, long maxBytes, CancellationToken ct)
+    {
+        using var resp = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, ct);
+        resp.EnsureSuccessStatusCode();
+        if ((resp.Content.Headers.ContentLength ?? 0) > maxBytes)
+            throw new InvalidOperationException($"Response from {url} exceeds size limit ({maxBytes / 1024} KB).");
+
+        await using var stream = await resp.Content.ReadAsStreamAsync(ct);
+        using var ms = new MemoryStream();
+        var buf = new byte[8192];
+        int read;
+        while ((read = await stream.ReadAsync(buf, ct)) > 0)
+        {
+            if (ms.Length + read > maxBytes)
+                throw new InvalidOperationException($"Response from {url} exceeded size limit during read.");
+            ms.Write(buf, 0, read);
+        }
+        return Encoding.UTF8.GetString(ms.ToArray());
+    }
+
+    // NOTE (MEDIUM-2): ExtractBundleToStaging, ParseBundleHash, IsVersionNewer, and EscapePs are
+    // the canonical implementations. InstallerService.cs in ClipNotes.Setup contains similar ZIP
+    // logic (DownloadAppAsync). Both must be kept in sync when changing extraction / traversal guard.
+
+    internal static string? ParseBundleUrl(JsonNode releaseNode)
     {
         try
         {
@@ -279,9 +319,9 @@ public class UpdateService
         }
     }
 
-    private static string? ParseBundleHash(string sumsText)
+    internal static string? ParseBundleHash(string sumsText)
     {
-        foreach (var line in sumsText.Split('\n', '\r', StringSplitOptions.RemoveEmptyEntries))
+        foreach (var line in sumsText.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries))
         {
             var parts = line.Split(new[] { ' ', '\t' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length >= 2 &&
@@ -291,7 +331,7 @@ public class UpdateService
         return null;
     }
 
-    private static bool IsVersionNewer(string latest, string current)
+    internal static bool IsVersionNewer(string latest, string current)
     {
         if (Version.TryParse(latest, out var vLatest) &&
             Version.TryParse(current, out var vCurrent))
@@ -299,7 +339,7 @@ public class UpdateService
         return string.Compare(latest, current, StringComparison.OrdinalIgnoreCase) > 0;
     }
 
-    private static string EscapePs(string path) => path.Replace("'", "''");
+    internal static string EscapePs(string path) => path.Replace("'", "''");
 
     private static void TryDeleteFile(string path)
     {

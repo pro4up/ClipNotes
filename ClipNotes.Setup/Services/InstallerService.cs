@@ -435,7 +435,6 @@ public class InstallerService
                     $"{label}: downloaded file too small ({fileSize / 1_048_576.0:F1} MB, expected ≥{minBytes / 1_048_576} MB)");
 
             SetStep(Loc.T("inst_StepExtract", label));
-            SetStep(Loc.T("inst_StepExtract", label));
 
             Directory.CreateDirectory(destDir);
             var canonBase = Path.GetFullPath(destDir).TrimEnd(Path.DirectorySeparatorChar)

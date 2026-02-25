@@ -83,6 +83,9 @@ public partial class MainViewModel
 
     private void LoadSettings()
     {
+        _loadingSettings = true;
+        try
+        {
         var s = _settingsService.Load();
         ObsHost = s.ObsHost;
         ObsPort = s.ObsPort;
@@ -158,14 +161,21 @@ public partial class MainViewModel
             ? (s.Theme is "Dark" or "Тёмная" ? 1 : 0)
             : DetectWindowsTheme();
         _settingsLoaded = true;
+        } // end try
+        finally
+        {
+            _loadingSettings = false;
+        }
 
-        // Init status strings after localization is loaded
+        // Init status strings after localization is loaded (these don't trigger SaveSettings)
         ObsStatus = Loc.T("loc_StatusObsDisconnected");
         RecordingStatus = Loc.T("loc_StatusReady");
     }
 
     public void SaveSettings()
     {
+        if (_loadingSettings) return; // suppress during initial load to avoid redundant I/O
+
         var s = new AppSettings
         {
             ObsHost = ObsHost,
