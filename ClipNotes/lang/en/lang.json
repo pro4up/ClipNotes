@@ -156,5 +156,14 @@
   "loc_UpdateAvailable":     "Update available: {0}",
   "loc_UpdateFilesChanged":  "Updated files available",
   "loc_UpdateFailed":        "Update check failed",
-  "loc_BtnDownloadUpdate":   "Download Update"
+  "loc_BtnDownloadUpdate":   "Download Update",
+  "loc_BtnInstallUpdate":    "Install Update",
+  "loc_BtnRestartToApply":   "Restart to Apply",
+  "loc_UpdateDownloading":   "Downloading...",
+  "loc_UpdateDownloadFailed":"Download failed",
+  "loc_UpdateReadyShort":    "Update ready to install",
+  "loc_UpdateReadyTitle":    "Update ready",
+  "loc_UpdateReadyMsg":      "Version {0} has been downloaded. Restart ClipNotes to apply the update.\n\nYour settings will be preserved.",
+  "loc_BtnRestartNow":       "Restart Now",
+  "loc_BtnLater":            "Later"
 }

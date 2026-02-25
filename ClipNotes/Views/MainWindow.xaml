@@ -753,12 +753,27 @@
                                                TextWrapping="Wrap" MaxWidth="320"/>
                                 </StackPanel>
 
-                                <!-- Download update button (visible only when update is available) -->
-                                <Button Content="{DynamicResource loc_BtnDownloadUpdate}"
-                                        Command="{Binding OpenUpdateUrlCommand}"
+                                <!-- Install / Restart button (visible when update is available) -->
+                                <Button Command="{Binding InstallUpdateCommand}"
+                                        IsEnabled="{Binding IsDownloadingUpdate, Converter={StaticResource InverseBool}}"
                                         Style="{StaticResource PrimaryButton}"
                                         Padding="14,6"
-                                        Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolToVis}}"/>
+                                        Visibility="{Binding UpdateAvailable, Converter={StaticResource BoolToVis}}">
+                                    <Button.Content>
+                                        <TextBlock>
+                                            <TextBlock.Style>
+                                                <Style TargetType="TextBlock" BasedOn="{StaticResource BaseText}">
+                                                    <Setter Property="Text" Value="{DynamicResource loc_BtnInstallUpdate}"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding IsUpdateReady}" Value="True">
+                                                            <Setter Property="Text" Value="{DynamicResource loc_BtnRestartToApply}"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </TextBlock.Style>
+                                        </TextBlock>
+                                    </Button.Content>
+                                </Button>
                             </StackPanel>
                         </Border>
 

@@ -156,5 +156,14 @@
   "loc_UpdateAvailable":     "Доступна версия {0}",
   "loc_UpdateFilesChanged":  "Доступно обновление файлов",
   "loc_UpdateFailed":        "Ошибка проверки",
-  "loc_BtnDownloadUpdate":   "Скачать обновление"
+  "loc_BtnDownloadUpdate":   "Скачать обновление",
+  "loc_BtnInstallUpdate":    "Установить обновление",
+  "loc_BtnRestartToApply":   "Перезапустить для обновления",
+  "loc_UpdateDownloading":   "Загрузка...",
+  "loc_UpdateDownloadFailed":"Ошибка загрузки",
+  "loc_UpdateReadyShort":    "Обновление готово к установке",
+  "loc_UpdateReadyTitle":    "Обновление готово",
+  "loc_UpdateReadyMsg":      "Версия {0} загружена. Перезапустите ClipNotes, чтобы применить обновление.\n\nНастройки сохранятся.",
+  "loc_BtnRestartNow":       "Перезапустить",
+  "loc_BtnLater":            "Позже"
 }

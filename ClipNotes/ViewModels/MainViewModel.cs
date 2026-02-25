@@ -137,6 +137,12 @@ public partial class MainViewModel : ObservableObject
     [ObservableProperty] private string? _updateUrl;
     // Stored hash of the installed bundle ZIP — used to detect silent content changes.
     [ObservableProperty] private string? _installedBundleHash;
+    // Download + staging state (not persisted)
+    [ObservableProperty] private bool _isDownloadingUpdate;
+    [ObservableProperty] private bool _isUpdateReady;   // true after bundle staged successfully
+    private string? _latestVersionForDialog;
+    private string? _pendingStagingDir;
+    private string? _pendingUpdaterScript;
 
     // --- Language ---
     [ObservableProperty] private string _selectedLanguage = "ru";
@@ -255,6 +261,9 @@ public partial class MainViewModel : ObservableObject
         _hotkeyService.Dispose();
         _obs.Dispose();
         SaveSettings();
+        // Clean up any staged update that was dismissed with "Later"
+        if (!IsUpdateReady)
+            UpdateService.CleanupStagedUpdate(_pendingStagingDir, _pendingUpdaterScript);
     }
 }
 
