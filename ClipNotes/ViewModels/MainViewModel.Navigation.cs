@@ -90,16 +90,21 @@ public partial class MainViewModel
     private void OpenSessionFolder()
     {
         var folder = _currentSession?.SessionFolder;
-        if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
+        if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder) && IsLocalPath(folder))
             Process.Start("explorer.exe", folder);
     }
 
     [RelayCommand]
     private void OpenHistoryFolder(string? folderPath)
     {
-        if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath))
+        if (!string.IsNullOrEmpty(folderPath) && Directory.Exists(folderPath) && IsLocalPath(folderPath))
             Process.Start("explorer.exe", folderPath);
     }
+
+    // Reject UNC paths (\\server\share) that could trigger outbound SMB connections
+    // when explorer.exe opens them — a path stored in settings could be manipulated.
+    private static bool IsLocalPath(string path) =>
+        Path.IsPathRooted(path) && !path.StartsWith(@"\\");
 
     [RelayCommand]
     private void BrowseCustomPath(string which)

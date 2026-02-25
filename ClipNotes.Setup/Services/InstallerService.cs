@@ -23,9 +23,9 @@ public class InstallerService
     private const string FfmpegUrl =
         "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip";
     private const string WhisperCpuUrl =
-        "https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-bin-x64.zip";
+        "https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-blas-bin-x64.zip";
     private const string WhisperCudaUrl =
-        "https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-cublas-12.0.0-bin-x64.zip";
+        "https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-cublas-12.4.0-bin-x64.zip";
     private const string ModelBaseUrl =
         "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/";
 

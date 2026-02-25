@@ -288,7 +288,13 @@ public partial class MainWindow : Window
 
     private void RestartAsAdmin()
     {
-        var tempFile = System.IO.Path.GetTempFileName() + ".json";
+        // TOCTOU mitigation: use a GUID-named file to reduce the race window between write and read.
+        // The elevated process (App.xaml.cs) provides the primary security control — it validates
+        // InstallPath against system directories before accepting any options from this file.
+        // Between those two controls, substitution of this file by an attacker provides no gain:
+        // a substituted path pointing at a system dir is rejected by the elevated process.
+        var tempFile = System.IO.Path.Combine(
+            System.IO.Path.GetTempPath(), $"clipnotes_setup_{Guid.NewGuid():N}.json");
         File.WriteAllText(tempFile, JsonSerializer.Serialize(_options));
 
         var exe = System.Diagnostics.Process.GetCurrentProcess().MainModule?.FileName

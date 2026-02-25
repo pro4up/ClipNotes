@@ -44,6 +44,11 @@ public partial class App : Application
                 {
                     preloaded = JsonSerializer.Deserialize<InstallOptions>(File.ReadAllText(file));
                     File.Delete(file);
+
+                    // Validate install path before accepting options from temp file (HIGH-3):
+                    // reject system directories that an attacker might substitute via race condition.
+                    if (preloaded != null && !IsValidInstallPath(preloaded.InstallPath))
+                        preloaded = null;
                 }
                 catch { /* дефолтные опции */ }
             }
@@ -55,6 +60,29 @@ public partial class App : Application
             : new MainWindow();
         MainWindow = window;
         window.Show();
+    }
+
+    // Reject install paths pointing at OS system directories to mitigate TOCTOU temp-file attacks.
+    // Note: the GUID-named temp file (see MainWindow.RestartAsAdmin) already narrows the race window;
+    // this validation is the primary defense against a substituted options file pointing at a
+    // dangerous install location (system dirs, UNC shares).
+    private static bool IsValidInstallPath(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path) || !System.IO.Path.IsPathRooted(path)) return false;
+
+        // Reject UNC paths (\\server\share) — installation to network shares is unsupported
+        // and consistent with the IsLocalPath() check used in MainViewModel.Navigation.cs.
+        if (path.StartsWith(@"\\")) return false;
+
+        var forbidden = new[]
+        {
+            Environment.SystemDirectory,
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+            Environment.GetFolderPath(Environment.SpecialFolder.System),
+            Environment.GetFolderPath(Environment.SpecialFolder.SystemX86),
+        };
+        return !forbidden.Any(f =>
+            !string.IsNullOrEmpty(f) && path.StartsWith(f, StringComparison.OrdinalIgnoreCase));
     }
 
     private static bool DetectDarkTheme()

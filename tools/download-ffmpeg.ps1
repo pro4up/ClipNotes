@@ -1,6 +1,10 @@
 # Download FFmpeg essentials build from gyan.dev
 param(
-    [string]$OutputDir = "$PSScriptRoot\..\..\app\tools"
+    [string]$OutputDir     = "$PSScriptRoot\..\..\app\tools",
+    # Pin expected SHA-256 of the archive here to enable supply-chain verification.
+    # Leave empty to skip verification (less secure, but needed when pinning isn't feasible).
+    # To obtain: download the archive manually, then run: (Get-FileHash path -Algorithm SHA256).Hash
+    [string]$ExpectedSha256 = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -25,6 +29,19 @@ if (-not (Test-Path $cacheZip)) {
     Write-Host "[FFmpeg] Download complete."
 } else {
     Write-Host "[FFmpeg] Using cached archive."
+}
+
+# Verify SHA-256 if expected hash is provided (supply-chain protection)
+if (-not [string]::IsNullOrEmpty($ExpectedSha256)) {
+    Write-Host "[FFmpeg] Verifying SHA-256..."
+    $actualHash = (Get-FileHash $cacheZip -Algorithm SHA256).Hash
+    if ($actualHash -ne $ExpectedSha256.ToUpper()) {
+        Remove-Item $cacheZip -Force
+        throw "[FFmpeg] SHA-256 mismatch! Expected: $ExpectedSha256  Got: $actualHash  Archive deleted."
+    }
+    Write-Host "[FFmpeg] SHA-256 OK."
+} else {
+    Write-Host "[FFmpeg] WARNING: SHA-256 verification skipped (no ExpectedSha256 provided)." -ForegroundColor Yellow
 }
 
 # Extract

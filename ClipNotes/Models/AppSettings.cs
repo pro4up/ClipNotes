@@ -7,7 +7,11 @@ public class AppSettings
     // OBS Connection
     public string ObsHost { get; set; } = "localhost";
     public int ObsPort { get; set; } = 4455;
+    // Runtime only — serialized as ObsPasswordEncrypted (DPAPI) by SettingsService
+    [System.Text.Json.Serialization.JsonIgnore]
     public string? ObsPassword { get; set; }
+    // Encrypted storage field (DPAPI, CurrentUser scope). Populated by SettingsService.Save().
+    public string? ObsPasswordEncrypted { get; set; }
 
     // Output
     public string OutputRootDirectory { get; set; } = "";

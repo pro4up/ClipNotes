@@ -233,6 +233,13 @@ public partial class MainViewModel
             return;
         }
 
+        const int MaxImportMarkers = 10_000;
+        if (file.Markers.Count > MaxImportMarkers)
+        {
+            ProcessingStatus = $"Файл содержит слишком много маркеров: {file.Markers.Count} (максимум {MaxImportMarkers})";
+            return;
+        }
+
         foreach (var entry in file.Markers)
         {
             if (!Enum.TryParse<MarkerType>(entry.Type, true, out var markerType)) continue;

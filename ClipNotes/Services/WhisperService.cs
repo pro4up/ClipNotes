@@ -23,20 +23,35 @@ public class WhisperService
     {
         Directory.CreateDirectory(Path.GetDirectoryName(outputBasePath)!);
 
-        var threads = Math.Min(Environment.ProcessorCount, 8);
-        var args = $"-m \"{_modelPath}\" -f \"{audioClipPath}\" -t {threads}";
+        var psi = new ProcessStartInfo
+        {
+            FileName = _whisperCliPath,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        };
 
-        // Strictly whitelist language codes (ISO 639-1/3: 2-8 lowercase alpha chars) before injecting
+        psi.ArgumentList.Add("-m"); psi.ArgumentList.Add(_modelPath);
+        psi.ArgumentList.Add("-f"); psi.ArgumentList.Add(audioClipPath);
+        psi.ArgumentList.Add("-t"); psi.ArgumentList.Add(Math.Min(Environment.ProcessorCount, 8).ToString());
+
+        // Strictly whitelist language codes (ISO 639-1/3: 2-8 lowercase alpha chars)
         if (language != "auto" && !string.IsNullOrWhiteSpace(language)
             && System.Text.RegularExpressions.Regex.IsMatch(language, @"^[a-z]{2,8}$"))
-            args += $" -l {language}";
+        {
+            psi.ArgumentList.Add("-l"); psi.ArgumentList.Add(language);
+        }
 
         if (!string.IsNullOrWhiteSpace(glossary))
-            args += $" --prompt \"{glossary.Replace("\"", "\\\"")}\"";
+        {
+            psi.ArgumentList.Add("--prompt"); psi.ArgumentList.Add(glossary);
+        }
 
-        args += $" --output-txt -of \"{outputBasePath}\"";
+        psi.ArgumentList.Add("--output-txt");
+        psi.ArgumentList.Add("-of"); psi.ArgumentList.Add(outputBasePath);
 
-        await RunProcessAsync(_whisperCliPath, args, ct);
+        await RunProcessAsync(psi, ct);
 
         var txtPath = outputBasePath + ".txt";
         if (File.Exists(txtPath))
@@ -44,19 +59,9 @@ public class WhisperService
         return "";
     }
 
-    private static async Task<string> RunProcessAsync(string exe, string args, CancellationToken ct)
+    private static async Task<string> RunProcessAsync(ProcessStartInfo psi, CancellationToken ct)
     {
-        using var process = new Process();
-        process.StartInfo = new ProcessStartInfo
-        {
-            FileName = exe,
-            Arguments = args,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
-
+        using var process = new Process { StartInfo = psi };
         process.Start();
         // Read stdout and stderr concurrently to prevent pipe buffer deadlock
         var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);

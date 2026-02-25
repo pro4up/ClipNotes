@@ -16,8 +16,13 @@ public class FFmpegService
 
     public async Task<TimeSpan> GetDurationAsync(string filePath, CancellationToken ct = default)
     {
-        var args = $"-v error -show_entries format=duration -of default=noprint_wrappers=1:nokey=1 \"{filePath}\"";
-        var output = await RunProcessAsync(_ffprobePath, args, ct);
+        var psi = BuildPsi(_ffprobePath);
+        psi.ArgumentList.Add("-v"); psi.ArgumentList.Add("error");
+        psi.ArgumentList.Add("-show_entries"); psi.ArgumentList.Add("format=duration");
+        psi.ArgumentList.Add("-of"); psi.ArgumentList.Add("default=noprint_wrappers=1:nokey=1");
+        psi.ArgumentList.Add(filePath);
+
+        var output = await RunProcessAsync(psi, ct);
         if (double.TryParse(output.Trim(), System.Globalization.NumberStyles.Any,
             System.Globalization.CultureInfo.InvariantCulture, out var seconds))
             return TimeSpan.FromSeconds(seconds);
@@ -28,8 +33,17 @@ public class FFmpegService
         CancellationToken ct = default)
     {
         Directory.CreateDirectory(Path.GetDirectoryName(outputWavPath)!);
-        var args = $"-y -i \"{videoPath}\" -vn -ar 16000 -ac 1 -c:a pcm_s16le \"{outputWavPath}\"";
-        await RunProcessAsync(_ffmpegPath, args, ct);
+
+        var psi = BuildPsi(_ffmpegPath);
+        psi.ArgumentList.Add("-y");
+        psi.ArgumentList.Add("-i"); psi.ArgumentList.Add(videoPath);
+        psi.ArgumentList.Add("-vn");
+        psi.ArgumentList.Add("-ar"); psi.ArgumentList.Add("16000");
+        psi.ArgumentList.Add("-ac"); psi.ArgumentList.Add("1");
+        psi.ArgumentList.Add("-c:a"); psi.ArgumentList.Add("pcm_s16le");
+        psi.ArgumentList.Add(outputWavPath);
+
+        await RunProcessAsync(psi, ct);
     }
 
     public async Task ExtractAudioClipAsync(string masterAudioPath, string outputPath,
@@ -39,39 +53,48 @@ public class FFmpegService
         Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);
         var ic = System.Globalization.CultureInfo.InvariantCulture;
 
-        string args;
-        if (codec.ToLower() == "wav" || codec.ToLower() == "pcm_s16le")
+        var psi = BuildPsi(_ffmpegPath);
+        psi.ArgumentList.Add("-y");
+        psi.ArgumentList.Add("-ss"); psi.ArgumentList.Add(start.TotalSeconds.ToString("F3", ic));
+        psi.ArgumentList.Add("-i"); psi.ArgumentList.Add(masterAudioPath);
+        psi.ArgumentList.Add("-t"); psi.ArgumentList.Add(duration.TotalSeconds.ToString("F3", ic));
+
+        switch (codec.ToLower())
         {
-            // Fast seek + stream copy: no re-encoding, near-instant for PCM WAV
-            args = $"-y -ss {start.TotalSeconds.ToString("F3", ic)} -i \"{masterAudioPath}\" -t {duration.TotalSeconds.ToString("F3", ic)} -c:a copy \"{outputPath}\"";
-        }
-        else
-        {
-            var codecArgs = codec.ToLower() switch
-            {
-                "mp3" => $"-c:a libmp3lame -b:a {bitrate}k",
-                "aac" => $"-c:a aac -b:a {bitrate}k",
-                _ => $"-c:a pcm_s16le"
-            };
-            args = $"-y -ss {start.TotalSeconds.ToString("F3", ic)} -i \"{masterAudioPath}\" -t {duration.TotalSeconds.ToString("F3", ic)} {codecArgs} \"{outputPath}\"";
+            case "wav":
+            case "pcm_s16le":
+                // Fast seek + stream copy: no re-encoding, near-instant for PCM WAV
+                psi.ArgumentList.Add("-c:a"); psi.ArgumentList.Add("copy");
+                break;
+            case "mp3":
+                psi.ArgumentList.Add("-c:a"); psi.ArgumentList.Add("libmp3lame");
+                psi.ArgumentList.Add("-b:a"); psi.ArgumentList.Add($"{bitrate}k");
+                break;
+            case "aac":
+                psi.ArgumentList.Add("-c:a"); psi.ArgumentList.Add("aac");
+                psi.ArgumentList.Add("-b:a"); psi.ArgumentList.Add($"{bitrate}k");
+                break;
+            default:
+                psi.ArgumentList.Add("-c:a"); psi.ArgumentList.Add("pcm_s16le");
+                break;
         }
 
-        await RunProcessAsync(_ffmpegPath, args, ct);
+        psi.ArgumentList.Add(outputPath);
+        await RunProcessAsync(psi, ct);
     }
 
-    private static async Task<string> RunProcessAsync(string exe, string args, CancellationToken ct)
+    private static ProcessStartInfo BuildPsi(string exe) => new()
     {
-        using var process = new Process();
-        process.StartInfo = new ProcessStartInfo
-        {
-            FileName = exe,
-            Arguments = args,
-            UseShellExecute = false,
-            RedirectStandardOutput = true,
-            RedirectStandardError = true,
-            CreateNoWindow = true
-        };
+        FileName = exe,
+        UseShellExecute = false,
+        RedirectStandardOutput = true,
+        RedirectStandardError = true,
+        CreateNoWindow = true
+    };
 
+    private static async Task<string> RunProcessAsync(ProcessStartInfo psi, CancellationToken ct)
+    {
+        using var process = new Process { StartInfo = psi };
         process.Start();
         // Read stdout and stderr concurrently to prevent pipe buffer deadlock
         var stdoutTask = process.StandardOutput.ReadToEndAsync(ct);

@@ -1,0 +1,132 @@
+﻿[10:56:30] 
+[10:56:30] ══════════════════════════════════════════════
+[10:56:30]   1. BUILD OUTPUT STRUCTURE
+[10:56:30] ══════════════════════════════════════════════
+[10:56:30]   [PASS] app\ dir exists
+[10:56:30]   [PASS] tools\ dir exists
+[10:56:30]   [PASS] models\ dir exists
+[10:56:30]   [PASS] lang\ dir exists
+[10:56:30]   [PASS] licenses\ dir exists
+[10:56:30]   [PASS] ClipNotes.exe exists
+[10:56:30]   [PASS] ClipNotes.Uninstaller.exe
+[10:56:30]   [PASS] ffmpeg.exe exists
+[10:56:30]   [PASS] ffprobe.exe exists
+[10:56:30]   [PASS] whisper-cli.exe exists
+[10:56:30]   [PASS] at least one model present
+[10:56:30]   [PASS] lang/ru/lang.json exists
+[10:56:30]   [PASS] lang/en/lang.json exists
+[10:56:30]   [PASS] lang JSON valid: lang.json
+[10:56:30]   [PASS] lang JSON valid: lang.json
+[10:56:30]   [PASS] Setup exe exists
+[10:56:30]   [PASS] Setup exe > 100 KB
+[10:56:30]   [PASS] SHA256SUMS.txt exists
+[10:56:30] 
+[10:56:30] ══════════════════════════════════════════════
+[10:56:30]   2. BINARY SANITY CHECKS
+[10:56:30] ══════════════════════════════════════════════
+[10:56:30]   [PASS] ffprobe responds
+[10:56:30]     ffprobe: ffprobe version 8.0.1-essentials_build-www.gyan.dev Copyright (c) 2007-2025 the FFmpeg developers
+[10:56:31]   [PASS] ffmpeg responds
+[10:56:31]     ffmpeg: ffmpeg version 8.0.1-essentials_build-www.gyan.dev Copyright (c) 2000-2025 the FFmpeg developers
+[10:56:31]   [PASS] whisper-cli responds
+[10:56:31] 
+[10:56:31] ══════════════════════════════════════════════
+[10:56:31]   3. SIMULATE INSTALLATION → C:\ClipNotesTest
+[10:56:31] ══════════════════════════════════════════════
+[10:56:43]   [PASS] test app\ClipNotes.exe
+[10:56:43]   [PASS] test app\Uninstaller.exe
+[10:56:43]   [PASS] test tools\ffmpeg.exe
+[10:56:43]   [PASS] test tools\ffprobe.exe
+[10:56:43]   [PASS] test tools\whisper-cli.exe
+[10:56:43]   [PASS] test lang\ru\lang.json
+[10:56:43]   [PASS] test lang\en\lang.json
+[10:56:43]   [PASS] test models present
+[10:56:44]   [PASS] registry key created
+[10:56:44] 
+[10:56:44] ══════════════════════════════════════════════
+[10:56:44]   4. APP LAUNCH TEST
+[10:56:44] ══════════════════════════════════════════════
+[10:56:48]   [PASS] ClipNotes.exe starts
+[10:56:48]   [PASS] working set > 10 MB
+[10:56:48]     WorkingSet: 163.3MB, pid=20764
+[10:56:48] 
+[10:56:48] ══════════════════════════════════════════════
+[10:56:48]   5. SETTINGS & APPDATA
+[10:56:48] ══════════════════════════════════════════════
+[10:56:50]   [PASS] settings.json created by app
+[10:56:50]   [PASS] settings has ObsHost
+[10:56:50]   [PASS] no plaintext ObsPassword
+[10:56:50]   [PASS] CRIT-2: no plaintext password in settings.json
+[10:56:50]     ObsHost=localhost, ObsPort=4455, Lang=ru
+[10:56:50] 
+[10:56:50] ══════════════════════════════════════════════
+[10:56:50]   6. PIPELINE TEST (FFmpeg + Whisper)
+[10:56:50] ══════════════════════════════════════════════
+[10:56:50]   [PASS] ffprobe duration extracted
+[10:56:50]     Video duration: 3743.1s
+[10:56:50]   [PASS] ffmpeg extracts audio WAV
+[10:56:50]     WAV size: 156.3KB (5 sec @ 16kHz mono)
+[10:56:50]   [PASS] ffmpeg clip extraction
+[10:56:50]   [PASS] ffmpeg MP3 encoding
+[10:56:52]   [PASS] whisper creates .txt
+[10:56:52]     Transcription words: 6
+[10:56:52]   [PASS] whisper transcription complete
+[10:56:52] 
+[10:56:52] ══════════════════════════════════════════════
+[10:56:52]   7. SECURITY: PATH VALIDATION (MED-2)
+[10:56:52] ══════════════════════════════════════════════
+[10:56:52]   Injected traversal paths: OutputRootDirectory='C:\Windows\..\..\evil', GlossaryFilePath='..\secret.txt'
+[10:56:52]   (Runtime sanitization happens in SettingsService.Load() in C# — verifying at app level)
+[10:56:52]   [PASS] security injection test data prepared (sanitized at C# runtime)
+[10:56:52] 
+[10:56:52] ══════════════════════════════════════════════
+[10:56:52]   8. STOP APPLICATION
+[10:56:52] ══════════════════════════════════════════════
+[10:56:52]   [PASS] ClipNotes.exe stopped cleanly
+[10:56:53] 
+[10:56:53] ══════════════════════════════════════════════
+[10:56:53]   9. UNINSTALLER HIERARCHY & LAUNCH
+[10:56:53] ══════════════════════════════════════════════
+[10:56:53]   [PASS] Uninstaller.exe exists in install dir
+[10:56:53]   [PASS] uninstall registry key present
+[10:56:53]   [PASS] InstallLocation matches test dir
+[10:56:53]   InstallLocation: C:\ClipNotesTest
+[10:56:53]   SHA256SUMS content:
+[10:56:53]     7C9DAD1895FFAD188D60F7C8CF7087F511718F59EAE120F9259B611BAE80F976  ClipNotes-Setup-Offline.exe
+[10:56:53]     918E56587A692A89637F0A642D5ECDB9542DF87525712C5599C2CC60BEF9D11B  ClipNotes-Setup.exe
+[10:56:53]     DF099119EA2B2BF0B0CB25124021CC2EBBA58DCE63C80EEE4C97D18042496ABD  ClipNotes-bundle.zip
+[10:56:53]     75B2FFAA9AE2DBB065070627ABF3AF5BADA67E253BD494AF8E8EFD76BC9FA01A  ClipNotes-offline-bundle.zip
+[10:56:53]   [PASS] SHA256SUMS.txt readable
+[10:56:53]   Launching uninstaller (will verify it opens, then close)...
+[10:56:58]   [PASS] Uninstaller.exe starts
+[10:56:58]   [PASS] Uninstaller stopped cleanly
+[10:56:58] 
+[10:56:58] ══════════════════════════════════════════════
+[10:56:58]   10. SIMULATE UNINSTALL (file removal)
+[10:56:58] ══════════════════════════════════════════════
+[10:56:58]   [PASS] registry key removed
+[10:56:58]   Desktop shortcut: not present (ok for test install)
+[10:56:58]   Start Menu dir:   not present (ok for test install)
+[10:56:59]   [PASS] install dir removed
+[10:56:59] 
+[10:56:59] ══════════════════════════════════════════════
+[10:56:59]   11. INSTALLER DOWNLOAD LINKS
+[10:56:59] ══════════════════════════════════════════════
+[10:56:59]   Found 5 URLs in InstallerService.cs
+[10:57:00]   [PASS] URL reachable: https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-blas-b
+[10:57:01]   [PASS] URL reachable: https://github.com/ggerganov/whisper.cpp/releases/latest/download/whisper-cublas
+[10:57:02]   [PASS] URL reachable: https://github.com/pro4up/ClipNotes/releases/latest/download/ClipNotes-bundle.zi
+[10:57:02]   [INFO] Skipping HuggingFace base prefix (not a file URL): https://huggingface.co/ggerganov/whisper.cpp/resolve/main/
+[10:57:02]   [PASS] URL reachable: https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-essentials.zip
+[10:57:02] 
+  Cleaned temp test artifacts: C:\Temp\clipnotes_test_20260225_105650
+[10:57:02] 
+[10:57:02] ══════════════════════════════════════════════
+[10:57:02]   TEST RESULTS SUMMARY
+[10:57:02] ══════════════════════════════════════════════
+[10:57:02]   PASSED:   56
+[10:57:02]   FAILED:   0
+[10:57:02]   WARNINGS: 0
+[10:57:02]   TOTAL:    56
+[10:57:02] 
+[10:57:02]   ✓ ALL TESTS PASSED

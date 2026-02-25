@@ -1,4 +1,5 @@
 using System.IO;
+using System.Net;
 using System.Net.WebSockets;
 using System.Security.Cryptography;
 using System.Text;
@@ -28,6 +29,36 @@ public class ObsWebSocketService : IDisposable
             Error?.Invoke("OBS host не может быть пустым");
             return false;
         }
+
+        // Validate host: must be a valid DNS name or IP address (reject URIs, user@host, etc.)
+        var hostType = Uri.CheckHostName(host);
+        if (hostType != UriHostNameType.Dns && hostType != UriHostNameType.IPv4 && hostType != UriHostNameType.IPv6)
+        {
+            Error?.Invoke("OBS host содержит недопустимые символы");
+            return false;
+        }
+
+        // Validate port range
+        if (port < 1 || port > 65535)
+        {
+            Error?.Invoke("OBS порт должен быть в диапазоне 1–65535");
+            return false;
+        }
+
+        // Warn about unencrypted connection to non-loopback hosts — both log and UI event,
+        // because the user may not monitor logs but should know their traffic is unencrypted.
+        bool isLoopback = host.Equals("localhost", StringComparison.OrdinalIgnoreCase)
+            || host == "127.0.0.1"
+            || (IPAddress.TryParse(host, out var ip) && IPAddress.IsLoopback(ip));
+        if (!isLoopback)
+        {
+            var msg = $"Внимание: подключение к {host} по незашифрованному каналу (ws://). Используйте localhost для безопасного подключения.";
+            LogService.Warn($"OBS WebSocket: {msg}");
+            Error?.Invoke(msg);
+            // Note: we still proceed with the connection — the warning is informational.
+            // Return false here if a hard policy against unencrypted remote connections is desired.
+        }
+
         try
         {
             Disconnect();

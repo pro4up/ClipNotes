@@ -51,9 +51,37 @@ public partial class MainWindow : Window
         return null;
     }
 
+    // Returns true if dir is safe to pass to cmd.exe rmdir (no metacharacters, not a system dir).
+    private static readonly char[] ForbiddenDirChars = { '"', '&', '|', '<', '>', '^', ';', '%', '\0' };
+
+    private static bool IsValidInstallDir(string dir)
+    {
+        if (!Path.IsPathRooted(dir)) return false;
+
+        // Reject paths containing cmd.exe metacharacters that can't be safely quoted.
+        // IndexOfAny is O(n) vs O(n*m) for the linq alternative.
+        if (dir.IndexOfAny(ForbiddenDirChars) >= 0) return false;
+
+        // Reject system directories to prevent accidental or malicious wipe
+        var systemPaths = new[]
+        {
+            Environment.SystemDirectory,
+            Environment.GetFolderPath(Environment.SpecialFolder.Windows),
+        };
+        return !systemPaths.Any(s =>
+            !string.IsNullOrEmpty(s) && dir.StartsWith(s, StringComparison.OrdinalIgnoreCase));
+    }
+
     private void Uninstall_Click(object sender, RoutedEventArgs e)
     {
         if (_installDir == null)
+        {
+            ShowResult(success: false, Loc.T("uninst_NoPath"));
+            return;
+        }
+
+        // Validate before passing to cmd.exe (HIGH-4: path injection via registry value)
+        if (!IsValidInstallDir(_installDir))
         {
             ShowResult(success: false, Loc.T("uninst_NoPath"));
             return;
@@ -110,13 +138,12 @@ public partial class MainWindow : Window
             // then delete the remaining install folder (including uninstaller exe + its DLLs).
             // UseShellExecute=true inherits the elevated token so rmdir can delete from Program Files.
             // timeout /t 4 waits 4 s (< auto-close 2 s + safety margin) then rmdir cleans everything.
+            // Path is pre-validated: no metacharacters, so quoting is safe.
             Process.Start(new ProcessStartInfo
             {
-                FileName       = cmdExe,
-                // Escape any embedded double-quotes in the path to prevent cmd.exe argument breaking
-                Arguments      = $"/c timeout /t 4 /nobreak > nul " +
-                                 $"& rmdir /s /q \"{installDir.Replace("\"", "\"\"")}\"",
-                WindowStyle    = ProcessWindowStyle.Hidden,
+                FileName        = cmdExe,
+                Arguments       = $"/c timeout /t 4 /nobreak > nul & rmdir /s /q \"{installDir}\"",
+                WindowStyle     = ProcessWindowStyle.Hidden,
                 UseShellExecute = true,
             });
 

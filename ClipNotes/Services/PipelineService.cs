@@ -53,7 +53,14 @@ public class PipelineService
 
         var glossary = settings.Glossary;
         if (!string.IsNullOrWhiteSpace(settings.GlossaryFilePath) && File.Exists(settings.GlossaryFilePath))
+        {
+            const long MaxGlossaryBytes = 64 * 1024; // 64 KB — more than enough for a whisper prompt
+            var fi = new FileInfo(settings.GlossaryFilePath);
+            if (fi.Length > MaxGlossaryBytes)
+                throw new InvalidOperationException(
+                    $"Файл глоссария слишком большой: {fi.Length:N0} байт (максимум {MaxGlossaryBytes:N0})");
             glossary = await File.ReadAllTextAsync(settings.GlossaryFilePath, ct);
+        }
 
         var markersToProcess = session.Markers.Where(m => m.GenerateAudio || m.GenerateText).ToList();
         if (markersToProcess.Count == 0)

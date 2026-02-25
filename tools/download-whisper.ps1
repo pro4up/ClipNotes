@@ -3,7 +3,13 @@
 param(
     [string]$OutputDir  = "$PSScriptRoot\..\..\app\tools",
     [string]$Backend    = "cpu",      # cpu | cuda
-    [string]$WhisperTag = "v1.8.3"
+    [string]$WhisperTag = "v1.8.3",
+    # Pin expected SHA-256 of the downloaded zip for supply-chain verification.
+    # Known hashes for v1.8.3:
+    #   cpu  (whisper-blas-bin-x64.zip):          — fill in after first download
+    #   cuda (whisper-cublas-12.4.0-bin-x64.zip): — fill in after first download
+    # To obtain: (Get-FileHash <zipPath> -Algorithm SHA256).Hash
+    [string]$ExpectedSha256 = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -68,6 +74,19 @@ if ($needDownload) {
         Build-FromSource $OutputDir $cacheDir
         return
     }
+}
+
+# Verify SHA-256 if expected hash is provided (supply-chain protection)
+if (-not [string]::IsNullOrEmpty($ExpectedSha256)) {
+    Write-Host "[Whisper] Verifying SHA-256..."
+    $actualHash = (Get-FileHash $zipPath -Algorithm SHA256).Hash
+    if ($actualHash -ne $ExpectedSha256.ToUpper()) {
+        Remove-Item $zipPath -Force
+        throw "[Whisper] SHA-256 mismatch! Expected: $ExpectedSha256  Got: $actualHash  Archive deleted."
+    }
+    Write-Host "[Whisper] SHA-256 OK."
+} else {
+    Write-Host "[Whisper] WARNING: SHA-256 verification skipped (no ExpectedSha256 provided)." -ForegroundColor Yellow
 }
 
 # Extract
