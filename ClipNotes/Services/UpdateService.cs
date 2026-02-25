@@ -3,6 +3,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
 using System.Reflection;
+using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json.Nodes;
 
@@ -111,6 +112,21 @@ public class UpdateService
                 }
             }
 
+            // Verify SHA-256 before extracting (MITM / corruption guard)
+            var expectedHash = await FetchBundleHashAsync(ct);
+            if (expectedHash == null)
+                throw new InvalidOperationException(
+                    "Could not verify bundle checksum — SHA256SUMS.txt unavailable.");
+
+            await using (var hashStream = File.OpenRead(zipPath))
+            {
+                var hashBytes = await SHA256.HashDataAsync(hashStream, ct);
+                var actualHash = Convert.ToHexString(hashBytes);
+                if (!string.Equals(actualHash, expectedHash, StringComparison.OrdinalIgnoreCase))
+                    throw new InvalidOperationException(
+                        "Bundle checksum mismatch — download may be corrupted or tampered with.");
+            }
+
             // Extract ClipNotes/app/* → stagingDir
             ExtractBundleToStaging(zipPath, stagingDir);
         }
@@ -137,12 +153,12 @@ public class UpdateService
         var appExe = Path.Combine(appDir, "ClipNotes.exe");
 
         var sb = new StringBuilder();
-        sb.AppendLine("$ErrorActionPreference = 'SilentlyContinue'");
         sb.AppendLine($"$pidToWait = {currentPid}");
         sb.AppendLine($"$src = '{EscapePs(stagingDir)}'");
         sb.AppendLine($"$dst = '{EscapePs(appDir)}'");
         sb.AppendLine($"$exe = '{EscapePs(appExe)}'");
         sb.AppendLine($"$script = '{EscapePs(scriptPath)}'");
+        sb.AppendLine($"$log = Join-Path $env:TEMP 'ClipNotes-update.log'");
         sb.AppendLine();
         // Wait for the app to exit (up to 60 s)
         sb.AppendLine("for ($i = 0; $i -lt 120; $i++) {");
@@ -150,26 +166,33 @@ public class UpdateService
         sb.AppendLine("    Start-Sleep -Milliseconds 500");
         sb.AppendLine("}");
         sb.AppendLine();
-        // Copy files from staging to appDir
-        sb.AppendLine("Get-ChildItem -Path $src -Recurse | ForEach-Object {");
-        sb.AppendLine("    $rel = $_.FullName.Substring($src.Length + 1)");
-        sb.AppendLine("    $target = Join-Path $dst $rel");
-        sb.AppendLine("    if ($_.PSIsContainer) {");
-        sb.AppendLine("        New-Item -ItemType Directory -Path $target -Force | Out-Null");
-        sb.AppendLine("    } else {");
-        sb.AppendLine("        Copy-Item -Path $_.FullName -Destination $target -Force");
+        // Copy files — Stop on error so partial writes are visible in the log
+        sb.AppendLine("$ErrorActionPreference = 'Stop'");
+        sb.AppendLine("try {");
+        sb.AppendLine("    Get-ChildItem -Path $src -Recurse | ForEach-Object {");
+        sb.AppendLine("        $rel = $_.FullName.Substring($src.Length + 1)");
+        sb.AppendLine("        $target = Join-Path $dst $rel");
+        sb.AppendLine("        if ($_.PSIsContainer) {");
+        sb.AppendLine("            New-Item -ItemType Directory -Path $target -Force | Out-Null");
+        sb.AppendLine("        } else {");
+        sb.AppendLine("            Copy-Item -Path $_.FullName -Destination $target -Force");
+        sb.AppendLine("        }");
         sb.AppendLine("    }");
+        sb.AppendLine("} catch {");
+        sb.AppendLine("    \"[ClipNotes updater] Copy failed: $_\" | Out-File $log -Append");
+        sb.AppendLine("    exit 1");
         sb.AppendLine("}");
         sb.AppendLine();
-        // Cleanup staging
-        sb.AppendLine("Remove-Item $src -Recurse -Force -ErrorAction SilentlyContinue");
+        // Cleanup and restart — errors here are non-fatal
+        sb.AppendLine("$ErrorActionPreference = 'SilentlyContinue'");
+        sb.AppendLine("Remove-Item $src -Recurse -Force");
         sb.AppendLine();
         // Start updated app
         sb.AppendLine("Start-Process $exe");
         sb.AppendLine();
         // Self-delete
         sb.AppendLine("Start-Sleep -Milliseconds 500");
-        sb.AppendLine("Remove-Item $script -Force -ErrorAction SilentlyContinue");
+        sb.AppendLine("Remove-Item $script -Force");
 
         File.WriteAllText(scriptPath, sb.ToString(), Encoding.UTF8);
         return scriptPath;
@@ -178,12 +201,17 @@ public class UpdateService
     /// <summary>Launches the updater PS1 script detached and returns immediately.</summary>
     public static void LaunchUpdaterScript(string scriptPath)
     {
+        // Use -EncodedCommand (Base64 UTF-16LE) to avoid any path-escaping issues
+        // with spaces or special characters in %TEMP% / user profile paths.
+        var command = $"& '{EscapePs(scriptPath)}'";
+        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(command));
+
         Process.Start(new ProcessStartInfo
         {
-            FileName = "powershell.exe",
-            Arguments = $"-NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -File \"{scriptPath}\"",
+            FileName        = "powershell.exe",
+            Arguments       = $"-NonInteractive -WindowStyle Hidden -ExecutionPolicy Bypass -EncodedCommand {encoded}",
             UseShellExecute = true,
-            WindowStyle = ProcessWindowStyle.Hidden
+            WindowStyle     = ProcessWindowStyle.Hidden
         });
     }
 
