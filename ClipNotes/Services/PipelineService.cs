@@ -54,7 +54,7 @@ public class PipelineService
         var glossary = settings.Glossary;
         if (!string.IsNullOrWhiteSpace(settings.GlossaryFilePath) && File.Exists(settings.GlossaryFilePath))
         {
-            const long MaxGlossaryBytes = 64 * 1024; // 64 KB — more than enough for a whisper prompt
+            const long MaxGlossaryBytes = 5 * 1024 * 1024; // 5 MB
             var fi = new FileInfo(settings.GlossaryFilePath);
             if (fi.Length > MaxGlossaryBytes)
                 throw new InvalidOperationException(
