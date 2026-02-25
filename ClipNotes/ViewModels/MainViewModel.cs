@@ -143,6 +143,8 @@ public partial class MainViewModel : ObservableObject
     private string? _latestVersionForDialog;
     private string? _pendingStagingDir;
     private string? _pendingUpdaterScript;
+    private bool    _launchingUpdater;     // true only when updater script is about to run
+    private bool    _bundleAvailable;      // false when release has no bundle asset → fallback to browser
 
     // --- Language ---
     [ObservableProperty] private string _selectedLanguage = "ru";
@@ -261,8 +263,8 @@ public partial class MainViewModel : ObservableObject
         _hotkeyService.Dispose();
         _obs.Dispose();
         SaveSettings();
-        // Clean up any staged update that was dismissed with "Later"
-        if (!IsUpdateReady)
+        // Clean up staged update files unless the updater script is about to run
+        if (!_launchingUpdater)
             UpdateService.CleanupStagedUpdate(_pendingStagingDir, _pendingUpdaterScript);
     }
 }

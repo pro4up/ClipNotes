@@ -28,6 +28,7 @@ public partial class MainViewModel
             if (result.HasUpdate)
             {
                 UpdateAvailable = true;
+                _bundleAvailable = result.BundleUrl != null;
                 UpdateUrl = result.BundleUrl ?? result.ReleaseUrl;
                 _latestVersionForDialog = result.LatestVersion;
                 UpdateStatus = result.Reason == UpdateChangeReason.FilesChanged
@@ -71,6 +72,13 @@ public partial class MainViewModel
 
         if (string.IsNullOrEmpty(UpdateUrl))
             return;
+
+        // No bundle asset in the release → open GitHub release page in browser
+        if (!_bundleAvailable)
+        {
+            Process.Start(new ProcessStartInfo(UpdateUrl) { UseShellExecute = true });
+            return;
+        }
 
         IsDownloadingUpdate = true;
         UpdateStatus = Loc.T("loc_UpdateDownloading");
@@ -126,6 +134,7 @@ public partial class MainViewModel
         {
             SaveSettings(); // persist settings before exit
             LogSvc.Info("Restarting for update...");
+            _launchingUpdater = true; // tell Cleanup() to preserve staged files for the script
             UpdateService.LaunchUpdaterScript(_pendingUpdaterScript!);
             Application.Current.Shutdown();
         }
