@@ -4,6 +4,7 @@ using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using ClipNotes.Models;
+using ClipNotes.Services;
 using ClipNotes.ViewModels;
 using KeyEventArgs = System.Windows.Input.KeyEventArgs;
 
@@ -27,6 +28,7 @@ public partial class MainWindow : Window
         ViewModel.PropertyChanged += OnViewModelPropertyChanged;
         SyncDatePresetCombo();
         ViewModel.InitializeLogs();
+        AppVersionText.Text = UpdateService.CurrentVersion;
     }
 
     /// <summary>Syncs the preset ComboBox selection to match the currently loaded DateSuffixFormat.</summary>
@@ -127,6 +129,7 @@ public partial class MainWindow : Window
     private void NavTo_Transcription(object sender, RoutedEventArgs e)   => ScrollToCard(CardTranscription);
     private void NavTo_HistorySet(object sender, RoutedEventArgs e)      => ScrollToCard(CardHistorySet);
     private void NavTo_Hotkeys(object sender, RoutedEventArgs e)         => ScrollToCard(CardHotkeys);
+    private void NavTo_About(object sender, RoutedEventArgs e)           => ScrollToCard(CardAbout);
 
     private void DateSuffixPreset_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {

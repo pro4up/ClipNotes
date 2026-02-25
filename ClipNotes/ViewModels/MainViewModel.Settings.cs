@@ -144,6 +144,7 @@ public partial class MainViewModel
         HoldPreSeconds = s.HoldPreSeconds;
         HoldPostSeconds = s.HoldPostSeconds;
         HoldModeEnabled = s.HoldModeEnabled; // last — triggers OnHoldModeEnabledChanged
+        InstalledBundleHash = s.InstalledBundleHash;
 
         // Apply saved language (must be before status strings and theme)
         var lang = s.Language;
@@ -213,7 +214,8 @@ public partial class MainViewModel
             HoldPreSeconds = HoldPreSeconds,
             HoldPostSeconds = HoldPostSeconds,
             SessionHistory = SessionHistory.ToList(),
-            Language = SelectedLanguage
+            Language = SelectedLanguage,
+            InstalledBundleHash = InstalledBundleHash
         };
         _settingsService.Save(s);
     }

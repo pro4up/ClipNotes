@@ -78,6 +78,10 @@ public class AppSettings
     public bool DeleteFilesOnClear { get; set; } = false;
     public bool ClearMarkersOnVideoLoad { get; set; } = true;
 
+    // Update tracking — SHA-256 of ClipNotes-bundle.zip used during installation.
+    // Used to detect in-place file changes in the same release version.
+    public string? InstalledBundleHash { get; set; }
+
     public static List<HotkeyBindingData> GetDefaultHotkeys() => new()
     {
         new() { Action = HotkeyAction.MarkerBug, Key = (int)Key.F1, Modifiers = (int)ModifierKeys.Control },

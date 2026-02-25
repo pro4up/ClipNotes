@@ -37,6 +37,9 @@ public class InstallerService
     private const long WhisperMinBytes  =   5L * 1024 * 1024; //   5 MB minimum
     private const long WhisperMaxBytes  = 500L * 1024 * 1024; // 500 MB maximum
 
+    // Populated after bundle download + SHA256 verification; persisted to settings.json for update tracking.
+    private string? _installedBundleHash;
+
     public InstallerService(InstallOptions options)
     {
         _options = options;
@@ -181,6 +184,11 @@ public class InstallerService
             obj["Language"]         = validLangs.Contains(_options.Language) ? _options.Language : "en";
             obj["WhisperModel"]     = validModels.Contains(_options.Model) ? _options.Model : "large-v3-turbo";
             obj["StartWithWindows"] = _options.RunOnStartup;
+
+            // Persist the verified bundle hash so the app can detect in-place file updates later.
+            if (!string.IsNullOrEmpty(_installedBundleHash))
+                obj["InstalledBundleHash"] = _installedBundleHash;
+
             File.WriteAllText(settingsPath, obj.ToJsonString());
         }
         catch (Exception ex) { Log($"SaveSettings error: {ex.Message}"); }
@@ -296,7 +304,8 @@ public class InstallerService
 
     // ── Скачивание ──────────────────────────────────────────────────────────
 
-    // Fetches SHA256SUMS.txt from our release and verifies the downloaded bundle.
+    // Fetches SHA256SUMS.txt from our release, verifies the downloaded bundle, and
+    // stores the verified hash in _installedBundleHash for later persistence in settings.json.
     private async Task VerifyAppBundleSha256Async(string zipPath, CancellationToken ct)
     {
         var tempSums = Path.GetTempFileName();
@@ -335,6 +344,8 @@ public class InstallerService
                     $"ClipNotes bundle SHA-256 mismatch!\nExpected: {expected}\nGot:      {actual}");
 
             Log("[SHA256] ClipNotes bundle verified OK.");
+            // Store hash so the installed app can detect silent content updates later.
+            _installedBundleHash = actual;
         }
         finally
         {

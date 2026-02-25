@@ -146,5 +146,15 @@
 
   "loc_SubHeadLogs":         "Log",
   "loc_BtnOpenLogs":         "Open Folder",
-  "loc_BtnCopyLogs":         "Copy"
+  "loc_BtnCopyLogs":         "Copy",
+
+  "loc_SubHeadAbout":        "About",
+  "loc_LabelVersion":        "Version:",
+  "loc_BtnCheckUpdates":     "Check for Updates",
+  "loc_UpdateChecking":      "Checking for updates...",
+  "loc_UpdateUpToDate":      "Up to date: {0}",
+  "loc_UpdateAvailable":     "Update available: {0}",
+  "loc_UpdateFilesChanged":  "Updated files available",
+  "loc_UpdateFailed":        "Update check failed",
+  "loc_BtnDownloadUpdate":   "Download Update"
 }

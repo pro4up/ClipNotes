@@ -146,5 +146,15 @@
 
   "loc_SubHeadLogs":         "Журнал",
   "loc_BtnOpenLogs":         "Открыть папку",
-  "loc_BtnCopyLogs":         "Копировать"
+  "loc_BtnCopyLogs":         "Копировать",
+
+  "loc_SubHeadAbout":        "О программе",
+  "loc_LabelVersion":        "Версия:",
+  "loc_BtnCheckUpdates":     "Проверить обновления",
+  "loc_UpdateChecking":      "Проверка обновлений...",
+  "loc_UpdateUpToDate":      "Актуальная версия: {0}",
+  "loc_UpdateAvailable":     "Доступна версия {0}",
+  "loc_UpdateFilesChanged":  "Доступно обновление файлов",
+  "loc_UpdateFailed":        "Ошибка проверки",
+  "loc_BtnDownloadUpdate":   "Скачать обновление"
 }

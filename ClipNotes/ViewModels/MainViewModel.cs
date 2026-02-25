@@ -130,6 +130,14 @@ public partial class MainViewModel : ObservableObject
     private bool _themeSetByUser;
     private bool _settingsLoaded;
 
+    // --- Updates ---
+    [ObservableProperty] private string _updateStatus = "";
+    [ObservableProperty] private bool _isCheckingUpdate;
+    [ObservableProperty] private bool _updateAvailable;
+    [ObservableProperty] private string? _updateUrl;
+    // Stored hash of the installed bundle ZIP — used to detect silent content changes.
+    [ObservableProperty] private string? _installedBundleHash;
+
     // --- Language ---
     [ObservableProperty] private string _selectedLanguage = "ru";
     public List<string> AvailableLanguages { get; private set; } = [];
