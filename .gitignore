@@ -18,6 +18,9 @@ packages/
 # Logs
 tools/*.log
 
+# Temporary scripts
+tools/get-gh-token.ps1
+
 # OS
 .DS_Store
 Thumbs.db
